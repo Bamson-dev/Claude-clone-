@@ -4,7 +4,6 @@ A pixel-perfect Claude AI chat interface clone with real AI
 integration and three powerful features built specifically 
 for Nigerian entrepreneurs, marketers, and business owners.
 
-Live demo: [your GitHub Pages URL here]
 Built by: Bamidele Matthew — github.com/bamson-dev
 
 ---
