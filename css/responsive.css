@@ -1,0 +1,25 @@
+@media (min-width: 375px) {
+  .chat-main,
+  .input-shell,
+  .topbar,
+  .sidebar {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 768px) {
+  .empty-subtitle {
+    font-size: 18px;
+  }
+
+  .assistant-content,
+  .user-bubble {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .chat-empty-state {
+    min-height: calc(100dvh - 220px);
+  }
+}
