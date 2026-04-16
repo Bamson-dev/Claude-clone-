@@ -59,6 +59,11 @@
   color: var(--text-secondary);
 }
 
+.icon-btn i {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
 .mode-btn {
   min-height: 44px;
   border-radius: 999px;
@@ -534,12 +539,26 @@
   background: var(--claude-orange);
   color: #ffffff;
   font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.send-btn i {
+  font-size: 16px;
+  color: #ffffff;
 }
 
 .send-btn:disabled {
-  background: #c5c5c5;
-  color: #f1f1f1;
+  background: #ccc;
+  color: #ffffff;
   cursor: not-allowed;
+}
+
+.send-btn:disabled i {
+  color: #ffffff;
 }
 
 [data-theme="dark"] .send-btn:not(:disabled) {
@@ -580,6 +599,93 @@
 @media (max-width: 1023px) {
   .mode-btn .mode-text {
     display: none;
+  }
+
+  .input-left-actions .icon-btn,
+  .input-left-actions .mode-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--hover-bg);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .input-left-actions .icon-btn i,
+  .input-left-actions .mode-btn i {
+    font-size: 16px;
+    color: var(--text-secondary);
+  }
+
+  .input-left-actions #naijaModeBtn .mode-icon {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  #naijaModeBtn.active {
+    background: #008751;
+    border-color: #008751;
+    color: #ffffff;
+  }
+
+  #naijaModeBtn.active i,
+  #naijaModeBtn.active .mode-icon {
+    color: #ffffff;
+  }
+
+  .input-left-actions .content-btn:not(.active) {
+    background: var(--hover-bg);
+    border: 1px solid var(--border);
+  }
+
+  .input-left-actions .content-btn:not(.active) i {
+    color: #da7756;
+  }
+
+  .input-left-actions .content-btn.active {
+    background: #da7756;
+    border-color: #da7756;
+    color: #ffffff;
+  }
+
+  .input-left-actions .content-btn.active i {
+    color: #ffffff;
+  }
+
+  .input-left-actions .whatsapp-btn:not(.active) i {
+    color: #25d366;
+  }
+
+  .input-left-actions .whatsapp-btn.active {
+    background: #25d366;
+    border-color: #25d366;
+    color: #ffffff;
+  }
+
+  .input-left-actions .whatsapp-btn.active i {
+    color: #ffffff;
+  }
+
+  .send-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .send-btn:not(:disabled) {
+    background: #da7756;
+  }
+
+  .send-btn:disabled {
+    background: #ccc;
   }
 
   .content-result-body {
