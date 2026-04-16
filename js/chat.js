@@ -1,5 +1,5 @@
 (function chatModule() {
-  window.API_KEY = "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";
+  const WORKER_URL = "https://claude-proxy.bamzonline01.workers.dev/";
   const conversationHistory = [];
   const naijaSystemPrompt = `You are Claude operating in Naija Mode.
 
@@ -25,7 +25,9 @@ You do NOT:
 - Add unnecessary Nigerian expressions to every sentence
 
 Respond the way a sharp, educated Nigerian professional communicates with a peer: clear, direct, intelligent, with full Nigerian context where relevant.`;
+
   const whatsappSystemPrompt = `You are a WhatsApp business communication expert for Nigerian small and medium businesses. Generate professional, warm, and conversion-focused WhatsApp reply messages. Understand that Nigerian customers respond better to personalized, friendly messages that feel human, not robotic. Always end with a clear next step. Use the tone requested. If Friendly Pidgin is selected, use Nigerian Pidgin naturally. Include relevant emojis where appropriate for WhatsApp context since emojis are normal and expected in Nigerian WhatsApp business communication.`;
+
   const contentGenSystemPrompt = `You are the highest-level Nigerian marketing copywriter alive. You have mastered Akin Alabi's 'How to Sell to Nigerians', Alex Hormozi's $100M Offers framework, Gary Halbert's copywriting principles, and David Ogilvy's advertising wisdom. You apply all of these through a deeply Nigerian cultural lens.
 
 You understand Nigerian buyers at a psychological level:
@@ -160,6 +162,7 @@ LinkedIn:
 - No emojis except sparingly
 - 3-5 relevant professional hashtags at end
 - Total: 200-300 words`;
+
   const state = {
     started: false,
     currentStream: null,
@@ -227,9 +230,7 @@ LinkedIn:
   };
 
   function getActiveConversation() {
-    if (!state.activeConversationId) {
-      return null;
-    }
+    if (!state.activeConversationId) return null;
     return conversations.get(state.activeConversationId) || null;
   }
 
@@ -241,28 +242,19 @@ LinkedIn:
     let active = getActiveConversation();
     if (!active) {
       const id = Date.now().toString();
-      active = {
-        id,
-        title: formatTitle(userMessage),
-        messages: []
-      };
+      active = { id, title: formatTitle(userMessage), messages: [] };
       conversations.set(id, active);
       state.activeConversationId = id;
-      if (window.ClaudeSidebar) {
-        window.ClaudeSidebar.addConversation(active);
-      }
+      if (window.ClaudeSidebar) window.ClaudeSidebar.addConversation(active);
     }
     return active;
   }
 
   async function fetchClaude(payload, retries = 1) {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch(WORKER_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "x-api-key": window.API_KEY,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
     });
@@ -300,9 +292,7 @@ LinkedIn:
       messages: conversationHistory
     });
 
-    if (!response.ok) {
-      throw new Error("API request failed");
-    }
+    if (!response.ok) throw new Error("API request failed");
 
     const data = await response.json();
     const reply = data?.content?.[0]?.text || "Something went wrong. Please check your connection and try again.";
@@ -343,9 +333,7 @@ LinkedIn:
     const active = getActiveConversation();
     if (active) {
       active.messages.push({ role: "user", content: text, timestamp: new Date().toISOString() });
-      if (window.ClaudeSidebar) {
-        window.ClaudeSidebar.addConversation(active);
-      }
+      if (window.ClaudeSidebar) window.ClaudeSidebar.addConversation(active);
     }
   }
 
@@ -361,9 +349,7 @@ LinkedIn:
 
   function removeTypingIndicator() {
     const typing = document.getElementById("typingRow");
-    if (typing) {
-      typing.remove();
-    }
+    if (typing) typing.remove();
   }
 
   function formatTimestamp(dateObj) {
@@ -382,16 +368,11 @@ LinkedIn:
         const rawText = root.dataset.rawText || "";
         await navigator.clipboard.writeText(rawText);
         const icon = btn.querySelector("i");
-        if (!icon) {
-          return;
-        }
+        if (!icon) return;
         icon.className = "fa-solid fa-check";
-        setTimeout(() => {
-          icon.className = "fa-regular fa-copy";
-        }, 2000);
+        setTimeout(() => { icon.className = "fa-regular fa-copy"; }, 2000);
       });
     });
-
     root.querySelectorAll(".action-like").forEach((btn) => {
       btn.addEventListener("click", () => {
         const dislike = root.querySelector(".action-dislike");
@@ -403,7 +384,6 @@ LinkedIn:
         dislikeIcon.className = "fa-regular fa-thumbs-down";
       });
     });
-
     root.querySelectorAll(".action-dislike").forEach((btn) => {
       btn.addEventListener("click", () => {
         const like = root.querySelector(".action-like");
@@ -415,13 +395,10 @@ LinkedIn:
         likeIcon.className = "fa-regular fa-thumbs-up";
       });
     });
-
     root.querySelectorAll(".action-pin").forEach((btn) => {
       btn.addEventListener("click", () => {
         const active = getActiveConversation();
-        if (!active) {
-          return;
-        }
+        if (!active) return;
         active.pinnedMessage = root.dataset.rawText || "";
         updatePinnedUI(active);
         refreshPinStates();
@@ -435,9 +412,7 @@ LinkedIn:
     document.querySelectorAll(".message-row.assistant").forEach((row) => {
       const pinBtn = row.querySelector(".action-pin");
       const pinIcon = row.querySelector(".action-pin i");
-      if (!pinBtn || !pinIcon) {
-        return;
-      }
+      if (!pinBtn || !pinIcon) return;
       if (pinned && row.dataset.rawText === pinned) {
         pinBtn.classList.add("active-pin");
         pinIcon.className = "fa-solid fa-thumbtack";
@@ -450,9 +425,7 @@ LinkedIn:
 
   function updatePinnedUI(conversation) {
     const { pinnedStrip, pinnedText } = getEls();
-    if (!pinnedStrip || !pinnedText) {
-      return;
-    }
+    if (!pinnedStrip || !pinnedText) return;
     if (conversation && conversation.pinnedMessage) {
       pinnedText.textContent = conversation.pinnedMessage;
       pinnedStrip.classList.remove("hidden");
@@ -486,9 +459,7 @@ LinkedIn:
         attachAssistantActions(row);
         if (active) {
           active.messages.push({ role: "assistant", content: fullText, timestamp });
-          if (window.ClaudeSidebar) {
-            window.ClaudeSidebar.addConversation(active);
-          }
+          if (window.ClaudeSidebar) window.ClaudeSidebar.addConversation(active);
         }
         refreshPinStates();
       }
@@ -520,7 +491,6 @@ LinkedIn:
       state.started = false;
       return;
     }
-
     state.started = true;
     empty.classList.add("hidden");
     messages.classList.remove("hidden");
@@ -545,13 +515,9 @@ LinkedIn:
   }
 
   function loadConversation(id) {
-    if (!id) {
-      return;
-    }
+    if (!id) return;
     const conversation = conversations.get(id) || (window.ClaudeSidebar ? window.ClaudeSidebar.getConversationById(id) : null);
-    if (!conversation) {
-      return;
-    }
+    if (!conversation) return;
     conversations.set(id, conversation);
     state.activeConversationId = id;
     conversationHistory.length = 0;
@@ -559,9 +525,7 @@ LinkedIn:
       conversationHistory.push({ role: msg.role, content: msg.content });
     });
     renderConversationMessages(conversation);
-    if (window.ClaudeSidebar) {
-      window.ClaudeSidebar.setActiveById(id);
-    }
+    if (window.ClaudeSidebar) window.ClaudeSidebar.setActiveById(id);
   }
 
   async function generateContentResponse(payload) {
@@ -606,33 +570,24 @@ Every word must earn its place.
 This content must be ready to run as a paid ad with zero editing needed.`
       }]
     });
-    if (!response.ok) {
-      throw new Error("Content generation failed");
-    }
+    if (!response.ok) throw new Error("Content generation failed");
     const data = await response.json();
     return data?.content?.[0]?.text || "Something went wrong. Please try again.";
   }
 
   async function generateWhatsAppReply(payload) {
-    const selectedIncludes = payload.includes;
-    const selectedTone = payload.tone;
-    const businessType = payload.businessType;
-    const customerMessage = payload.customerMessage;
     const response = await fetchClaude({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
       system: whatsappSystemPrompt,
       messages: [{
         role: "user",
-        content: `Generate a WhatsApp business reply for a ${businessType} business. Customer message: "${customerMessage}". Tone: ${selectedTone}. Include: ${selectedIncludes.join(", ")}. Make it sound human, warm, and drive the customer toward buying or taking the next step.`
+        content: `Generate a WhatsApp business reply for a ${payload.businessType} business. Customer message: "${payload.customerMessage}". Tone: ${payload.tone}. Include: ${payload.includes.join(", ")}. Make it sound human, warm, and drive the customer toward buying or taking the next step.`
       }]
     });
-    if (!response.ok) {
-      throw new Error("WhatsApp generation failed");
-    }
+    if (!response.ok) throw new Error("WhatsApp generation failed");
     const data = await response.json();
-    const reply = data.content[0].text;
-    return reply;
+    return data.content[0].text;
   }
 
   function setGreeting() {
@@ -662,9 +617,7 @@ This content must be ready to run as a paid ad with zero editing needed.`
     if (pinnedClose) {
       pinnedClose.addEventListener("click", () => {
         const active = getActiveConversation();
-        if (!active) {
-          return;
-        }
+        if (!active) return;
         active.pinnedMessage = "";
         updatePinnedUI(active);
         refreshPinStates();
@@ -674,9 +627,7 @@ This content must be ready to run as a paid ad with zero editing needed.`
       sendMessage,
       loadConversation,
       renderMarkdown: parseMarkdown,
-      setNaijaMode: (isActive) => {
-        state.naijaModeActive = Boolean(isActive);
-      },
+      setNaijaMode: (isActive) => { state.naijaModeActive = Boolean(isActive); },
       generateContentResponse,
       generateWhatsAppReply,
       resetConversation: () => {
