@@ -1,25 +1,108 @@
-@media (min-width: 375px) {
-  .chat-main,
-  .input-shell,
-  .topbar,
-  .sidebar {
-    max-width: 100%;
+@media (max-width: 1023px) {
+  .chat-empty-state {
+    padding: 20px 16px;
+    gap: 8px;
   }
-}
 
-@media (min-width: 768px) {
+  .empty-greeting {
+    font-size: 22px;
+    font-weight: 600;
+    text-align: center;
+    margin: 0;
+  }
+
   .empty-subtitle {
-    font-size: 18px;
+    font-size: 14px;
+    text-align: center;
+    margin: 0;
   }
 
-  .assistant-content,
+  .suggestions-row {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 0 0 4px;
+    width: 100%;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .suggestions-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .suggestion-card {
+    min-width: 155px;
+    max-width: 195px;
+    flex-shrink: 0;
+    padding: 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    white-space: normal;
+    word-wrap: break-word;
+    text-align: left;
+  }
+
   .user-bubble {
-    font-size: 16px;
+    max-width: 88%;
+    font-size: 15px;
+  }
+
+  .assistant-content {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .message-actions {
+    opacity: 1;
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  .mode-text {
+    display: none;
+  }
+
+  .input-shell {
+    padding: 8px 12px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .chat-watermark {
+    display: none;
+  }
+
+  .content-panel,
+  .whatsapp-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+    max-height: 92dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 16px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    z-index: 1000;
   }
 }
 
 @media (min-width: 1024px) {
+  .topbar {
+    display: none;
+  }
+
   .chat-empty-state {
     min-height: calc(100dvh - 220px);
+  }
+
+  .mode-text {
+    display: inline;
   }
 }
