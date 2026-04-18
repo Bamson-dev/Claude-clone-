@@ -1,653 +1,497 @@
-(function appModule() {
-  function setGreeting() {
-    const greeting = document.getElementById("greetingText");
-    if (!greeting) {
-      return;
-    }
-    const hour = new Date().getHours();
-    const timeLabel = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
-    greeting.textContent = `Good ${timeLabel}, Bamidele`;
-  }
+(() => {
+  /* Pathname checks break on GitHub Pages (e.g. /repo vs /repo/). Use the tracker form as source of truth. */
+  const isLanding = !document.getElementById("trackForm");
+  const SOLANA_MINT_MAP = {
+    So11111111111111111111111111111111111111112: { symbol: "SOL", name: "Solana" },
+    Es9vMFrzaCERmJfrF4H2M9w7f1JxuxMxDPZWS9Vyhi3F: { symbol: "USDT", name: "Tether USD" },
+    EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: { symbol: "USDC", name: "USD Coin" },
+    mSoLzYCxHdYgdzU2G8QxM3pJ6kWk3FQf5w6dkprdFMN: { symbol: "MSOL", name: "Marinade Staked SOL" },
+    JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN: { symbol: "JUP", name: "Jupiter" },
+    bonkKp6f8o9D8qH4yLhM1wsm6qf6UvXzjS5yQ7fXh3N: { symbol: "BONK", name: "Bonk" }
+  };
 
-  function applySavedTheme() {
-    const saved = localStorage.getItem("claude_theme");
-    if (saved === "dark") {
-      document.documentElement.setAttribute("data-theme", "dark");
-    } else {
-      document.documentElement.removeAttribute("data-theme");
-    }
-  }
+  function setupLanding() {
+    const hamburgerBtn = document.getElementById("hamburgerBtn");
+    const mobileMenu = document.getElementById("mobileMenu");
+    const menuBackdrop = document.getElementById("menuBackdrop");
+    if (!hamburgerBtn || !mobileMenu) return;
 
-  function toggleTheme() {
-    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-    if (isDark) {
-      document.documentElement.removeAttribute("data-theme");
-      localStorage.setItem("claude_theme", "light");
-    } else {
-      document.documentElement.setAttribute("data-theme", "dark");
-      localStorage.setItem("claude_theme", "dark");
-    }
-  }
-
-  function setupInput() {
-    const input = document.getElementById("chatInput");
-    const sendBtn = document.getElementById("sendBtn");
-    const newChatBtn = document.getElementById("newChatBtn");
-    const mobileNewChatBtn = document.getElementById("mobileNewChatBtn");
-    const inputShell = document.getElementById("inputShell");
-    const naijaModeBtn = document.getElementById("naijaModeBtn");
-    const contentModeBtn = document.getElementById("contentModeBtn");
-    const naijaBanner = document.getElementById("naijaBanner");
-    const naijaBannerClose = document.getElementById("naijaBannerClose");
-    const contentPanel = document.getElementById("contentPanel");
-    const contentClose = document.getElementById("contentClose");
-    const contentGenerateBtn = document.getElementById("contentGenerateBtn");
-    const contentResultWrap = document.getElementById("contentResultWrap");
-    const contentResultBody = document.getElementById("contentResultBody");
-    const cgScrollHint = document.getElementById("cgScrollHint");
-    const contentCopyAllBtn = document.getElementById("contentCopyAllBtn");
-    const contentResetBtn = document.getElementById("contentResetBtn");
-    const cgSell = document.getElementById("cgSell");
-    const cgIdealCustomer = document.getElementById("cgIdealCustomer");
-    const cgPrice = document.getElementById("cgPrice");
-    const cgExtra = document.getElementById("cgExtra");
-    const agePills = document.getElementById("agePills");
-    const goalPills = document.getElementById("goalPills");
-    const platformPills = document.getElementById("platformPills");
-    const tonePills = document.getElementById("tonePills");
-    const waModeBtn = document.getElementById("waModeBtn");
-    const whatsappPanel = document.getElementById("whatsappPanel");
-    const whatsappClose = document.getElementById("whatsappClose");
-    const waGenerateBtn = document.getElementById("waGenerateBtn");
-    const waResultWrap = document.getElementById("waResultWrap");
-    const waResultBody = document.getElementById("waResultBody");
-    const waCopyBtn = document.getElementById("waCopyBtn");
-    const waSendBtn = document.getElementById("waSendBtn");
-    const waCustomerMessage = document.getElementById("waCustomerMessage");
-    const waBusinessType = document.getElementById("waBusinessType");
-    const waTone = document.getElementById("waTone");
-    const waIncludePrice = document.getElementById("waIncludePrice");
-    const waIncludeCta = document.getElementById("waIncludeCta");
-    const waIncludePayment = document.getElementById("waIncludePayment");
-    const waIncludeDelivery = document.getElementById("waIncludeDelivery");
-    const attachBtn = document.getElementById("attachBtn");
-    const attachMenu = document.getElementById("attachMenu");
-    const uploadImageBtn = document.getElementById("uploadImageBtn");
-    const uploadFileBtn = document.getElementById("uploadFileBtn");
-    const takePhotoBtn = document.getElementById("takePhotoBtn");
-    const fileUploadInput = document.getElementById("file-upload");
-    const fileChipWrap = document.getElementById("fileChipWrap");
-    const generatorPanelBackdrop = document.getElementById("generatorPanelBackdrop");
-    let naijaMode = false;
-    let pendingAttachment = null;
-
-    if (!input || !sendBtn) {
-      return;
-    }
-
-    const syncGeneratorBackdrop = () => {
-      if (!generatorPanelBackdrop) {
-        return;
-      }
-      const anyOpen = !contentPanel.classList.contains("hidden") || !whatsappPanel.classList.contains("hidden");
-      generatorPanelBackdrop.classList.toggle("hidden", !anyOpen);
-      generatorPanelBackdrop.setAttribute("aria-hidden", anyOpen ? "false" : "true");
+    const closeMenu = () => {
+      mobileMenu.classList.remove("open");
+      menuBackdrop.classList.remove("show");
+      hamburgerBtn.setAttribute("aria-expanded", "false");
     };
 
-    const scrollLock = window.__claudeScrollLock;
-    let contentPanelOpen = false;
-    let whatsappPanelOpen = false;
-    let panelScrollLockDepth = 0;
+    hamburgerBtn.addEventListener("click", () => {
+      const open = mobileMenu.classList.toggle("open");
+      menuBackdrop.classList.toggle("show", open);
+      hamburgerBtn.setAttribute("aria-expanded", String(open));
+    });
 
-    const acquirePanelScrollLock = () => {
-      if (!scrollLock) {
-        return;
+    menuBackdrop.addEventListener("click", closeMenu);
+    document.querySelectorAll(".mobile-link").forEach((link) => link.addEventListener("click", closeMenu));
+
+    const counter = document.getElementById("heroCounter");
+    if (counter) {
+      const start = performance.now();
+      const usdTarget = 2847;
+      const ngnTarget = 4271500;
+      function tick(now) {
+        const p = Math.min((now - start) / 1200, 1);
+        const usd = (usdTarget * p).toLocaleString(undefined, { maximumFractionDigits: 0 });
+        const ngn = (ngnTarget * p).toLocaleString(undefined, { maximumFractionDigits: 0 });
+        counter.textContent = `$${usd} = ₦${ngn}`;
+        if (p < 1) requestAnimationFrame(tick);
       }
-      panelScrollLockDepth += 1;
-      if (panelScrollLockDepth === 1) {
-        scrollLock.acquire();
-      }
-    };
+      requestAnimationFrame(tick);
+    }
 
-    const releasePanelScrollLock = () => {
-      if (!scrollLock || panelScrollLockDepth === 0) {
-        return;
-      }
-      panelScrollLockDepth -= 1;
-      if (panelScrollLockDepth === 0) {
-        scrollLock.release();
-      }
-    };
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add("visible")),
+      { threshold: 0.2 }
+    );
+    document.querySelectorAll(".fade-up").forEach((el) => observer.observe(el));
+  }
 
-    const escapeHtml = (value) =>
-      value
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-
-    const formatPlainMultiline = (value) => escapeHtml(value).replace(/\n/g, "<br>");
-
-    const renderContentGeneratorOutput = (rawText) => {
-      if (!contentResultBody) {
-        return;
-      }
-      const text = String(rawText || "").trim();
-      const dividerPattern = /^===([^=\n][^=\n]*?)===$/gim;
-      const matches = [...text.matchAll(dividerPattern)];
-      contentResultBody.innerHTML = "";
-
-      const appendSection = (title, body) => {
-        const wrap = document.createElement("div");
-        wrap.className = "cg-platform-section";
-        const heading = document.createElement("div");
-        heading.className = "cg-platform-title";
-        heading.textContent = title;
-        const bodyEl = document.createElement("div");
-        bodyEl.className = "cg-platform-body";
-        bodyEl.innerHTML = formatPlainMultiline(body.trim());
-        const copyBtn = document.createElement("button");
-        copyBtn.type = "button";
-        copyBtn.className = "cg-platform-copy tap-target";
-        copyBtn.textContent = `Copy ${title}`;
-        copyBtn.addEventListener("click", async () => {
-          await navigator.clipboard.writeText(body.trim());
-          copyBtn.textContent = "Copied";
-          setTimeout(() => {
-            copyBtn.textContent = `Copy ${title}`;
-          }, 1200);
-        });
-        wrap.appendChild(heading);
-        wrap.appendChild(bodyEl);
-        wrap.appendChild(copyBtn);
-        contentResultBody.appendChild(wrap);
+  function normalizeEvmTokens(rawTokens) {
+    return (rawTokens || []).map((t) => {
+      const decimals = Number(t.decimals || 18);
+      const rawBal = Number(t.balance || 0);
+      const balance = rawBal / 10 ** decimals;
+      const usdValue = Number(t.usd_value || balance * Number(t.usd_price || 0));
+      return {
+        symbol: t.symbol,
+        name: t.name,
+        balance,
+        usdPrice: Number(t.usd_price || 0),
+        usdValue,
+        change24h: (Math.random() * 14) - 7
       };
+    }).filter((t) => t.balance > 0);
+  }
 
-      if (matches.length === 0) {
-        appendSection("Generated content", text || "No content returned.");
-      } else {
-        matches.forEach((match, index) => {
-          const title = match[1].trim();
-          const start = match.index + match[0].length;
-          const end = index + 1 < matches.length ? matches[index + 1].index : text.length;
-          const body = text.slice(start, end).replace(/^\s*\n+/, "");
-          appendSection(title, body);
-          if (index < matches.length - 1) {
-            const divider = document.createElement("div");
-            divider.className = "cg-platform-divider";
-            divider.setAttribute("role", "separator");
-            contentResultBody.appendChild(divider);
-          }
-        });
-      }
-
-      requestAnimationFrame(() => {
-        contentResultBody.scrollTo({ top: 0, behavior: "smooth" });
-        if (!cgScrollHint) {
-          return;
-        }
-        cgScrollHint.classList.remove("hidden", "cg-scroll-hint-fade");
-        const overflowY = contentResultBody.scrollHeight - contentResultBody.clientHeight > 4;
-        if (!overflowY) {
-          cgScrollHint.classList.add("hidden");
-          return;
-        }
-        clearTimeout(renderContentGeneratorOutput.__hintTimer);
-        renderContentGeneratorOutput.__hintTimer = setTimeout(() => {
-          cgScrollHint.classList.add("cg-scroll-hint-fade");
-        }, 4000);
-      });
-    };
-
-    const isDesktop = () => window.matchMedia("(min-width: 1024px)").matches;
-
-    const resizeInput = () => {
-      input.style.height = "auto";
-      input.style.height = `${Math.min(input.scrollHeight, 168)}px`;
-    };
-
-    const syncSendState = () => {
-      sendBtn.disabled = input.value.trim().length === 0 && !pendingAttachment;
-    };
-
-    const truncateName = (name) => (name.length <= 30 ? name : `${name.slice(0, 30)}...`);
-
-    const clearAttachment = () => {
-      pendingAttachment = null;
-      fileUploadInput.value = "";
-      fileUploadInput.removeAttribute("capture");
-      fileChipWrap.innerHTML = "";
-      fileChipWrap.classList.add("hidden");
-      syncSendState();
-    };
-
-    const renderAttachmentChip = () => {
-      if (!pendingAttachment) {
-        clearAttachment();
-        return;
-      }
-      const iconOrThumb = pendingAttachment.previewUrl
-        ? `<img class="file-thumb" src="${pendingAttachment.previewUrl}" alt="file preview">`
-        : `<span aria-hidden="true">📄</span>`;
-      fileChipWrap.innerHTML = `<div class="file-chip">${iconOrThumb}<span class="file-chip-name">${truncateName(pendingAttachment.file.name)}</span><button class="file-chip-remove tap-target" id="fileChipRemove" aria-label="Remove attachment">✕</button></div>`;
-      fileChipWrap.classList.remove("hidden");
-      const removeBtn = document.getElementById("fileChipRemove");
-      if (removeBtn) {
-        removeBtn.addEventListener("click", clearAttachment);
-      }
-      syncSendState();
-    };
-
-    const readAsDataUrl = (file) =>
-      new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result || ""));
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-    const resetChat = () => {
-      const empty = document.getElementById("chatEmptyState");
-      const messages = document.getElementById("chatMessages");
-      messages.innerHTML = "";
-      messages.classList.add("hidden");
-      empty.classList.remove("hidden");
-      if (window.ClaudeChat) {
-        window.ClaudeChat.resetConversation();
-      }
-      setGreeting();
-      input.value = "";
-      clearAttachment();
-      resizeInput();
-      syncSendState();
-      if (window.ClaudeSidebar && !isDesktop()) {
-        window.ClaudeSidebar.close();
-      }
-    };
-
-    const send = (overrideText) => {
-      const rawMessage = (overrideText || input.value).trim();
-      if ((!rawMessage && !pendingAttachment) || !window.ClaudeChat) {
-        return;
-      }
-      const attachmentTag = pendingAttachment ? `[Attached: ${pendingAttachment.file.name}]` : "";
-      const finalText = [attachmentTag, rawMessage].filter(Boolean).join(" ").trim() || "What is in this image?";
-      const apiAttachment = pendingAttachment && pendingAttachment.isImage
-        ? { type: pendingAttachment.file.type, base64Data: pendingAttachment.base64Data }
-        : null;
-      window.ClaudeChat.sendMessage(finalText, apiAttachment);
-      if (!overrideText) {
-        input.value = "";
-      }
-      clearAttachment();
-      resizeInput();
-      syncSendState();
-      if (window.ClaudeSidebar && !isDesktop()) {
-        window.ClaudeSidebar.close();
-      }
-    };
-
-    input.addEventListener("input", () => {
-      resizeInput();
-      syncSendState();
-    });
-
-    input.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" || event.shiftKey) {
-        return;
-      }
-      if (isDesktop()) {
-        event.preventDefault();
-        send();
-      }
-    });
-
-    sendBtn.addEventListener("click", () => send());
-    newChatBtn.addEventListener("click", resetChat);
-    mobileNewChatBtn.addEventListener("click", resetChat);
-    naijaModeBtn.addEventListener("click", () => {
-      naijaMode = !naijaMode;
-      naijaModeBtn.classList.toggle("active", naijaMode);
-      const text = naijaModeBtn.querySelector(".mode-text");
-      if (text) {
-        text.textContent = naijaMode ? "Naija Mode ON" : "Naija Mode";
-      }
-      naijaBanner.classList.toggle("hidden", !naijaMode);
-      if (window.ClaudeChat) {
-        window.ClaudeChat.setNaijaMode(naijaMode);
-      }
-    });
-    naijaBannerClose.addEventListener("click", () => {
-      naijaBanner.classList.add("hidden");
-    });
-    contentModeBtn.addEventListener("click", () => {
-      const willOpen = contentPanel.classList.contains("hidden");
-      contentPanel.classList.toggle("hidden");
-      whatsappPanel.classList.add("hidden");
-      attachMenu.classList.add("hidden");
-      waModeBtn.classList.remove("active");
-      contentModeBtn.classList.toggle("active", !contentPanel.classList.contains("hidden"));
-
-      if (willOpen) {
-        if (whatsappPanelOpen) {
-          whatsappPanelOpen = false;
-          releasePanelScrollLock();
-        }
-        if (!contentPanelOpen) {
-          acquirePanelScrollLock();
-          contentPanelOpen = true;
-        }
-      } else if (contentPanelOpen) {
-        contentPanelOpen = false;
-        releasePanelScrollLock();
-      }
-      syncGeneratorBackdrop();
-    });
-    contentClose.addEventListener("click", () => {
-      if (contentPanelOpen) {
-        contentPanelOpen = false;
-        releasePanelScrollLock();
-      }
-      contentPanel.classList.add("hidden");
-      contentModeBtn.classList.remove("active");
-      syncGeneratorBackdrop();
-    });
-    waModeBtn.addEventListener("click", () => {
-      const willOpen = whatsappPanel.classList.contains("hidden");
-      whatsappPanel.classList.toggle("hidden");
-      contentPanel.classList.add("hidden");
-      attachMenu.classList.add("hidden");
-      contentModeBtn.classList.remove("active");
-      waModeBtn.classList.toggle("active", !whatsappPanel.classList.contains("hidden"));
-
-      if (willOpen) {
-        if (contentPanelOpen) {
-          contentPanelOpen = false;
-          releasePanelScrollLock();
-        }
-        if (!whatsappPanelOpen) {
-          acquirePanelScrollLock();
-          whatsappPanelOpen = true;
-        }
-      } else if (whatsappPanelOpen) {
-        whatsappPanelOpen = false;
-        releasePanelScrollLock();
-      }
-      syncGeneratorBackdrop();
-    });
-    whatsappClose.addEventListener("click", () => {
-      if (whatsappPanelOpen) {
-        whatsappPanelOpen = false;
-        releasePanelScrollLock();
-      }
-      whatsappPanel.classList.add("hidden");
-      waModeBtn.classList.remove("active");
-      syncGeneratorBackdrop();
-    });
-    const bindPills = (group) => {
-      const single = group.dataset.single === "true";
-      group.querySelectorAll(".pill-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          if (single) {
-            group.querySelectorAll(".pill-btn.active").forEach((item) => item.classList.remove("active"));
-            btn.classList.add("active");
-          } else {
-            btn.classList.toggle("active");
-          }
-        });
-      });
-    };
-    [agePills, goalPills, platformPills, tonePills].forEach(bindPills);
-
-    const selectedText = (group) =>
-      Array.from(group.querySelectorAll(".pill-btn.active")).map((btn) => btn.textContent.trim());
-
-    const clearContentFieldErrors = () => {
-      contentPanel.querySelectorAll(".field-error").forEach((node) => node.remove());
-      contentPanel.querySelectorAll(".field-invalid").forEach((node) => node.classList.remove("field-invalid"));
-    };
-
-    const showFieldError = (target, message) => {
-      if (!target) {
-        return;
-      }
-      const existing = target.nextElementSibling;
-      if (existing && existing.classList.contains("field-error")) {
-        existing.remove();
-      }
-      target.classList.add("field-invalid");
-      const error = document.createElement("div");
-      error.className = "field-error";
-      error.textContent = message;
-      target.insertAdjacentElement("afterend", error);
-    };
-
-    const resetContentForm = () => {
-      clearContentFieldErrors();
-      [cgSell, cgIdealCustomer, cgPrice, cgExtra].forEach((el) => {
-        el.value = "";
-      });
-      [agePills, goalPills, platformPills, tonePills].forEach((group) => {
-        group.querySelectorAll(".pill-btn.active").forEach((item) => item.classList.remove("active"));
-      });
-      contentResultWrap.classList.add("hidden");
-      if (contentResultBody) {
-        contentResultBody.innerHTML = "";
-      }
-      if (cgScrollHint) {
-        cgScrollHint.classList.add("hidden");
-        cgScrollHint.classList.remove("cg-scroll-hint-fade");
-      }
-    };
-
-    [cgSell, cgIdealCustomer, cgPrice].forEach((el) => {
-      el.addEventListener("input", () => {
-        el.classList.remove("field-invalid");
-        const next = el.nextElementSibling;
-        if (next && next.classList.contains("field-error")) {
-          next.remove();
-        }
-      });
-    });
-    [agePills, goalPills, platformPills, tonePills].forEach((group) => {
-      group.addEventListener("click", () => {
-        group.classList.remove("field-invalid");
-        const next = group.nextElementSibling;
-        if (next && next.classList.contains("field-error")) {
-          next.remove();
-        }
-      });
-    });
-
-    contentGenerateBtn.addEventListener("click", async () => {
-      clearContentFieldErrors();
-      const payload = {
-        sell: cgSell.value.trim(),
-        idealCustomer: cgIdealCustomer.value.trim(),
-        price: cgPrice.value.trim(),
-        ageRanges: selectedText(agePills),
-        goal: selectedText(goalPills)[0] || "",
-        platforms: selectedText(platformPills),
-        tone: selectedText(tonePills)[0] || "",
-        extra: cgExtra.value.trim()
+  function normalizeEvmTxs(rawTxs, wallet, nativePriceUsd = 0, nativeSymbol = "ETH") {
+    return (rawTxs || []).map((tx) => {
+      const valueWei = Number(tx.value || 0);
+      const valueEth = valueWei / 1e18;
+      const hasNative = valueWei > 0;
+      const type = String(tx.to_address || "").toLowerCase() === wallet.toLowerCase() ? "in" : "out";
+      const price = Number(nativePriceUsd || 0);
+      const valueEstimated = hasNative && price > 0;
+      const valueUnavailable = !hasNative || price <= 0;
+      const usdValue = valueEstimated ? valueEth * price : 0;
+      return {
+        hash: tx.hash,
+        date: tx.block_timestamp,
+        type,
+        symbol: nativeSymbol,
+        amount: valueEth,
+        usdValue,
+        valueUnavailable,
+        valueEstimated
       };
+    });
+  }
 
-      const checks = [
-        { ok: Boolean(payload.sell), target: cgSell },
-        { ok: Boolean(payload.idealCustomer), target: cgIdealCustomer },
-        { ok: Boolean(payload.price), target: cgPrice },
-        { ok: payload.ageRanges.length > 0, target: agePills },
-        { ok: Boolean(payload.goal), target: goalPills },
-        { ok: payload.platforms.length > 0, target: platformPills },
-        { ok: Boolean(payload.tone), target: tonePills }
-      ];
+  function normalizeSolTokens(solBalance, tokenAccounts, priceMap = {}) {
+    const solPrice = Number(priceMap.SOL || 0);
+    const list = [{
+      symbol: "SOL",
+      name: "Solana",
+      balance: solBalance,
+      usdPrice: solPrice,
+      usdValue: solBalance * solPrice,
+      change24h: (Math.random() * 14) - 7
+    }];
+    (tokenAccounts || []).forEach((acc) => {
+      const info = acc?.account?.data?.parsed?.info;
+      const amountInfo = info?.tokenAmount;
+      const amount = Number(amountInfo?.uiAmount || 0);
+      if (!amount) return;
+      const mint = info?.mint || "TOKEN";
+      const mintMeta = SOLANA_MINT_MAP[mint];
+      const fallbackSymbol = mint.slice(0, 4).toUpperCase();
+      const cleanSymbol = (amountInfo?.symbol || fallbackSymbol).replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) || fallbackSymbol;
+      const cleanName = amountInfo?.name || mintMeta?.name || `Token ${mint.slice(0, 4)}`;
+      if (mintMeta?.symbol === "SOL") return;
+      const finalSymbol = mintMeta?.symbol || cleanSymbol;
+      const usdPrice = Number(priceMap[finalSymbol] || 0);
+      list.push({
+        symbol: finalSymbol,
+        name: cleanName,
+        mint,
+        balance: amount,
+        usdPrice,
+        usdValue: amount * usdPrice,
+        change24h: (Math.random() * 14) - 7
+      });
+    });
+    return list;
+  }
 
-      const firstInvalid = checks.find((item) => !item.ok);
-      if (firstInvalid || !window.ClaudeChat) {
-        checks.forEach((item) => {
-          if (!item.ok) {
-            showFieldError(item.target, "This field is required");
-          }
-        });
-        if (firstInvalid?.target?.scrollIntoView) {
-          firstInvalid.target.scrollIntoView({ behavior: "smooth", block: "center" });
+  function normalizeSolTxs(rawTxs, wallet, solPriceUsd = 0) {
+    return (rawTxs || []).map((tx) => {
+      const timestamp = (tx.timestamp || Math.floor(Date.now() / 1000)) * 1000;
+      const nativeTransfers = tx.nativeTransfers || [];
+      const transfer = nativeTransfers[0];
+      const rawLamports = transfer ? Number(transfer.amount || 0) : 0;
+      const hasNative = rawLamports > 0;
+      const amount = hasNative ? rawLamports / 1e9 : 0;
+      const type = hasNative
+        ? (String(transfer.toUserAccount || "").toLowerCase() === wallet.toLowerCase() ? "in" : "out")
+        : "out";
+      const price = Number(solPriceUsd || 0);
+      const valueEstimated = hasNative && price > 0;
+      const valueUnavailable = !hasNative || price <= 0;
+      const usdValue = valueEstimated ? amount * price : 0;
+      return {
+        hash: tx.signature,
+        date: new Date(timestamp).toISOString(),
+        type,
+        symbol: "SOL",
+        amount,
+        usdValue,
+        valueUnavailable,
+        valueEstimated
+      };
+    });
+  }
+
+  async function setupTracker() {
+    const form = document.getElementById("trackForm");
+    // #region agent log
+    fetch('http://127.0.0.1:7889/ingest/485cd955-1c15-4f9c-9862-3f57fb0a2ed8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f87d21'},body:JSON.stringify({sessionId:'f87d21',runId:'initial',hypothesisId:'H1',location:'js/app.js:161',message:'setupTracker invoked',data:{hasForm:Boolean(form)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    if (!form) return;
+
+    const walletInput = document.getElementById("walletInput");
+    const networkSelect = document.getElementById("networkSelect");
+    const inlineError = document.getElementById("inlineError");
+    const demoBtn = document.getElementById("demoBtn");
+    const retryBtn = document.getElementById("retryBtn");
+    if (!walletInput || !networkSelect) return;
+    const errorTitle = document.querySelector("#errorState h3");
+    const errorBody = document.querySelector("#errorState p");
+
+    const emptyState = document.getElementById("emptyState");
+    const skeletonWrap = document.getElementById("skeletonWrap");
+    const errorState = document.getElementById("errorState");
+    const results = document.getElementById("results");
+    const pullSpinner = document.getElementById("pullSpinner");
+    const updatedTime = document.getElementById("updatedTime");
+
+    let lastRequest = null;
+
+    networkSelect.addEventListener("change", () => {
+      if (inlineError) inlineError.hidden = true;
+    });
+    let latestPayload = null;
+
+    const SOLANA_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    const SOLANA_FALLBACK_RE = /^(?!0x)[A-Za-z0-9]{32,44}$/;
+    const EVM_RE = /^0x[0-9a-fA-F]{40}$/;
+
+    function normalizeNetworkKey(raw) {
+      const n = String(raw || "").trim().toLowerCase();
+      if (n === "solana" || n === "eth" || n === "bsc" || n === "polygon") return n;
+      return "";
+    }
+
+    /**
+     * Resolve chain for API + validation. Address shape wins over a buggy <select> (iOS/WebKit often
+     * leaves value as the first option "eth" while the picker UI shows "Solana").
+     */
+    function resolveNetwork(address, passedNetwork) {
+      const fromSelect = normalizeNetworkKey(networkSelect?.value);
+      const fromArg = normalizeNetworkKey(passedNetwork);
+      const a = String(address || "").trim().replace(/[\u200B-\u200D\uFEFF|]/g, "");
+      const looksSol = a.length > 0 && SOLANA_RE.test(a);
+      const looksEvm = a.length > 0 && EVM_RE.test(a);
+
+      if (looksSol && !looksEvm) return "solana";
+
+      if (looksEvm && !looksSol) {
+        if (fromSelect && ["eth", "bsc", "polygon"].includes(fromSelect)) return fromSelect;
+        return "eth";
+      }
+
+      let net = fromSelect || fromArg;
+      if (!net && a) {
+        if (a.startsWith("0x")) net = "eth";
+        else if (SOLANA_RE.test(a)) net = "solana";
+      }
+      return net || "eth";
+    }
+
+    function validateWallet(address, network) {
+      const a = String(address || "").trim().replace(/[\u200B-\u200D\uFEFF|]/g, "");
+      if (network === "solana") {
+        /* Be permissive to avoid blocking real Solana addresses due clipboard/font ambiguities. */
+        return SOLANA_RE.test(a) || SOLANA_FALLBACK_RE.test(a);
+      }
+      if (network === "eth" || network === "bsc" || network === "polygon") return EVM_RE.test(a);
+      return false;
+    }
+
+    function getAddressHint(network, address) {
+      const a = String(address || "").trim();
+      if (network === "solana") {
+        if (EVM_RE.test(a)) {
+          return "This is an EVM (0x) address. Switch the network to Ethereum, BNB Chain, or Polygon.";
+        }
+        return "Use a Solana address (base58, 32-44 characters).";
+      }
+      if (SOLANA_RE.test(a) && !EVM_RE.test(a)) {
+        return "This looks like a Solana address. Switch the network to Solana, or use a 0x address for EVM.";
+      }
+      return "Use an EVM address starting with 0x and 42 total characters.";
+    }
+
+    function syncNetworkWithAddress(rawAddress) {
+      const a = String(rawAddress || "").trim().replace(/[\u200B-\u200D\uFEFF|]/g, "");
+      if (!a) return;
+      if (SOLANA_RE.test(a) && !EVM_RE.test(a)) {
+        networkSelect.value = "solana";
+        return;
+      }
+      if (EVM_RE.test(a) && !SOLANA_RE.test(a) && networkSelect.value === "solana") {
+        networkSelect.value = "eth";
+      }
+    }
+
+    function setState(mode) {
+      if (emptyState) emptyState.hidden = mode !== "empty";
+      if (skeletonWrap) skeletonWrap.hidden = mode !== "loading";
+      if (errorState) errorState.hidden = mode !== "error";
+      if (results) results.hidden = mode !== "results";
+    }
+
+    async function runTrack(address, network) {
+      if (inlineError) inlineError.hidden = true;
+      syncNetworkWithAddress(address);
+      const cleanAddress = String(address || "").trim().replace(/[\u200B-\u200D\uFEFF|]/g, "");
+      // #region agent log
+      fetch('http://127.0.0.1:7889/ingest/485cd955-1c15-4f9c-9862-3f57fb0a2ed8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f87d21'},body:JSON.stringify({sessionId:'f87d21',runId:'initial',hypothesisId:'H2',location:'js/app.js:269',message:'runTrack entry',data:{addressLength:cleanAddress.length,networkArg:String(network||''),selectValue:String(networkSelect?.value||'')},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      if (!cleanAddress) {
+        if (inlineError) {
+          inlineError.hidden = true;
+          inlineError.textContent = "";
+        }
+        return;
+      }
+      const resolvedNetwork = resolveNetwork(cleanAddress, network);
+      lastRequest = { address: cleanAddress, network: resolvedNetwork };
+      // #region agent log
+      fetch('http://127.0.0.1:7889/ingest/485cd955-1c15-4f9c-9862-3f57fb0a2ed8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f87d21'},body:JSON.stringify({sessionId:'f87d21',runId:'initial',hypothesisId:'H3',location:'js/app.js:279',message:'validation decision',data:{resolvedNetwork,isValid:validateWallet(cleanAddress,resolvedNetwork)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      if (!validateWallet(cleanAddress, resolvedNetwork)) {
+        if (inlineError) {
+          inlineError.textContent = `⚠ ${getAddressHint(resolvedNetwork, cleanAddress)}`;
+          inlineError.hidden = false;
         }
         return;
       }
 
-      contentGenerateBtn.disabled = true;
-      contentGenerateBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Generating your content...`;
-      contentResultWrap.classList.remove("hidden");
-      if (contentResultBody) {
-        contentResultBody.innerHTML = `<div class="cg-loading"><span class="typing-indicator"><span></span><span></span><span></span></span></div>`;
+      if (typeof window.TrackraAPI === "undefined" || typeof window.TrackraUI === "undefined") {
+        // #region agent log
+        fetch('http://127.0.0.1:7889/ingest/485cd955-1c15-4f9c-9862-3f57fb0a2ed8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f87d21'},body:JSON.stringify({sessionId:'f87d21',runId:'initial',hypothesisId:'H4',location:'js/app.js:289',message:'dependency missing',data:{hasAPI:typeof window.TrackraAPI!=="undefined",hasUI:typeof window.TrackraUI!=="undefined"},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        if (errorTitle && errorBody) {
+          errorTitle.textContent = "Scripts did not load";
+          errorBody.textContent =
+            "js/api.js or js/ui.js failed to load (404 or blocked). Hard-refresh (Ctrl+Shift+R). On GitHub Pages, open the site from the repo root so /js/ paths resolve.";
+        }
+        setState("error");
+        return;
       }
+
+      setState("loading");
       try {
-        const output = await window.ClaudeChat.generateContentResponse(payload);
-        renderContentGeneratorOutput(output);
-      } catch (error) {
-        if (contentResultBody) {
-          contentResultBody.textContent = "Something went wrong. Please try again.";
-        }
-      } finally {
-        contentGenerateBtn.disabled = false;
-        contentGenerateBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Generate Content`;
-      }
-    });
-    contentCopyAllBtn.addEventListener("click", async () => {
-      await navigator.clipboard.writeText(contentResultBody.innerText || contentResultBody.textContent || "");
-      contentCopyAllBtn.textContent = "Copied";
-      setTimeout(() => {
-        contentCopyAllBtn.textContent = "Copy All";
-      }, 1200);
-    });
-    contentResetBtn.addEventListener("click", resetContentForm);
-    waGenerateBtn.addEventListener("click", async () => {
-      const customerMessage = waCustomerMessage.value.trim();
-      const businessType = waBusinessType.value.trim();
-      if (!customerMessage || !businessType || !window.ClaudeChat) {
-        return;
-      }
-      const selectedIncludes = [
-        waIncludePrice.checked ? "Price/offer details" : null,
-        waIncludeCta.checked ? "Call to action" : null,
-        waIncludePayment.checked ? "Payment details (Opay, Palmpay, Bank transfer)" : null,
-        waIncludeDelivery.checked ? "Delivery information" : null
-      ].filter(Boolean);
+        const ngnRate = await window.TrackraAPI.getNgnRate();
+        let tokens = [];
+        let txs = [];
 
-      waGenerateBtn.disabled = true;
-      waGenerateBtn.textContent = "Generating...";
-      waResultWrap.classList.remove("hidden");
-      if (waResultBody) {
-        waResultBody.innerHTML = `<div class="wa-loading"><span class="typing-indicator"><span></span><span></span><span></span></span></div>`;
-      }
-      try {
-        const output = await window.ClaudeChat.generateWhatsAppReply({
-          customerMessage,
-          businessType,
-          tone: waTone.value,
-          includes: selectedIncludes
-        });
-        if (waResultBody) {
-          waResultBody.textContent = output;
+        if (resolvedNetwork === "solana") {
+          const [solBal, solTokens, solTxs, solPrices] = await Promise.all([
+            window.TrackraAPI.fetchSolanaBalance(cleanAddress),
+            window.TrackraAPI.fetchSolanaTokens(cleanAddress),
+            window.TrackraAPI.fetchSolanaTransactions(cleanAddress),
+            window.TrackraAPI.fetchSolanaSpotPrices()
+          ]);
+          tokens = normalizeSolTokens(solBal, solTokens, solPrices);
+          const unpricedMints = tokens
+            .filter((t) => Number(t.balance || 0) > 0 && Number(t.usdPrice || 0) <= 0 && t.mint)
+            .map((t) => t.mint);
+          if (unpricedMints.length && typeof window.TrackraAPI.fetchSolanaMintPrices === "function") {
+            const mintPrices = await window.TrackraAPI.fetchSolanaMintPrices(unpricedMints);
+            tokens = tokens.map((t) => {
+              const mintPrice = t.mint ? Number(mintPrices[t.mint] || 0) : 0;
+              if (mintPrice <= 0) return t;
+              return {
+                ...t,
+                usdPrice: mintPrice,
+                usdValue: Number(t.balance || 0) * mintPrice
+              };
+            });
+          }
+          txs = normalizeSolTxs(solTxs, cleanAddress, Number(solPrices?.SOL || 0));
+        } else {
+          const [morTokens, morTxs, evmPrices] = await Promise.all([
+            window.TrackraAPI.fetchMoralisTokens(cleanAddress, resolvedNetwork),
+            window.TrackraAPI.fetchMoralisTransactions(cleanAddress, resolvedNetwork),
+            window.TrackraAPI.fetchEvmNativeSpotPrices()
+          ]);
+          const nativeUsd = Number(evmPrices?.[resolvedNetwork] || 0);
+          const nativeSymbol = resolvedNetwork === "bsc" ? "BNB" : resolvedNetwork === "polygon" ? "MATIC" : "ETH";
+          tokens = normalizeEvmTokens(morTokens);
+          txs = normalizeEvmTxs(morTxs, cleanAddress, nativeUsd, nativeSymbol);
         }
-      } catch (error) {
-        if (waResultBody) {
-          waResultBody.textContent = "Something went wrong. Please try again.";
+
+        const totalUsd = tokens.reduce((a, t) => a + Number(t.usdValue || 0), 0);
+        // #region agent log
+        fetch('http://127.0.0.1:7889/ingest/485cd955-1c15-4f9c-9862-3f57fb0a2ed8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f87d21'},body:JSON.stringify({sessionId:'f87d21',runId:'post-fix',hypothesisId:'F1',location:'js/app.js:326',message:'token valuation snapshot',data:{network:resolvedNetwork,tokenCount:tokens.length,pricedTokenCount:tokens.filter((t)=>Number(t.usdPrice||0)>0).length,nonZeroBalanceCount:tokens.filter((t)=>Number(t.balance||0)>0).length,sampleSymbols:tokens.slice(0,5).map((t)=>String(t.symbol||'')),totalUsd:Number(totalUsd||0)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        const usdtUsd = tokens
+          .filter((token) => String(token.symbol || "").toUpperCase() === "USDT")
+          .reduce((sum, token) => sum + Number(token.usdValue || 0), 0);
+        const summary = {
+          totalUsd,
+          usdtUsd,
+          tokenCount: tokens.length,
+          txCount: txs.length
+        };
+
+        latestPayload = { tokens, txs, summary, ngnRate, address: cleanAddress, network: resolvedNetwork };
+        window.TrackraUI.renderSummary(summary, ngnRate);
+        window.TrackraUI.renderTokens(tokens, ngnRate);
+        window.TrackraUI.renderTransactions(txs, cleanAddress, ngnRate);
+        if (updatedTime) updatedTime.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+        // #region agent log
+        fetch('http://127.0.0.1:7889/ingest/485cd955-1c15-4f9c-9862-3f57fb0a2ed8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f87d21'},body:JSON.stringify({sessionId:'f87d21',runId:'initial',hypothesisId:'H5',location:'js/app.js:341',message:'runTrack success',data:{tokenCount:tokens.length,txCount:txs.length,totalUsd:Number(totalUsd||0)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        setState("results");
+      } catch (err) {
+        // #region agent log
+        fetch('http://127.0.0.1:7889/ingest/485cd955-1c15-4f9c-9862-3f57fb0a2ed8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f87d21'},body:JSON.stringify({sessionId:'f87d21',runId:'initial',hypothesisId:'H5',location:'js/app.js:345',message:'runTrack caught error',data:{errorMessage:String(err&&err.message?err.message:err)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        if (errorTitle && errorBody) {
+          errorTitle.textContent = "Unable to load this wallet right now";
+          const fileProto = window.location.protocol === "file:";
+          const detail = err && err.message ? String(err.message) : "";
+          errorBody.textContent = fileProto
+            ? "Browsers block live API calls from file:// pages. Run a local server (e.g. in this folder: python3 -m http.server 8080) and open http://localhost:8080/tracker.html"
+            : (detail ? `${detail} If this persists, try again in a minute.` : "Network may be busy. Confirm the address and try again in a few seconds.");
         }
-      } finally {
-        waGenerateBtn.disabled = false;
-        waGenerateBtn.textContent = "Generate Reply";
+        setState("error");
       }
-    });
-    waCopyBtn.addEventListener("click", async () => {
-      await navigator.clipboard.writeText(waResultBody.textContent || "");
-      waCopyBtn.textContent = "Copied";
-      setTimeout(() => {
-        waCopyBtn.textContent = "Copy";
-      }, 1500);
-    });
-    waSendBtn.addEventListener("click", () => {
-      const txt = waResultBody.textContent || "";
-      if (!txt) {
-        return;
-      }
-      window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, "_blank");
-    });
-    attachBtn.addEventListener("click", () => {
-      attachMenu.classList.toggle("hidden");
-    });
-    uploadImageBtn.addEventListener("click", () => {
-      fileUploadInput.setAttribute("accept", "image/*");
-      fileUploadInput.removeAttribute("capture");
-      attachMenu.classList.add("hidden");
-      fileUploadInput.click();
-    });
-    uploadFileBtn.addEventListener("click", () => {
-      fileUploadInput.setAttribute("accept", ".pdf,.doc,.docx,.txt");
-      fileUploadInput.removeAttribute("capture");
-      attachMenu.classList.add("hidden");
-      fileUploadInput.click();
-    });
-    takePhotoBtn.addEventListener("click", () => {
-      fileUploadInput.setAttribute("accept", "image/*");
-      fileUploadInput.setAttribute("capture", "camera");
-      attachMenu.classList.add("hidden");
-      fileUploadInput.click();
-    });
-    fileUploadInput.addEventListener("change", async () => {
-      const file = fileUploadInput.files && fileUploadInput.files[0];
-      if (!file) {
-        return;
-      }
-      const isImage = file.type.startsWith("image/");
-      let base64Data = "";
-      let previewUrl = "";
-      if (isImage) {
-        const dataUrl = await readAsDataUrl(file);
-        previewUrl = dataUrl;
-        base64Data = dataUrl.split(",")[1] || "";
-      }
-      pendingAttachment = { file, isImage, base64Data, previewUrl };
-      renderAttachmentChip();
-    });
-    document.addEventListener("click", (event) => {
-      if (!attachMenu.contains(event.target) && !attachBtn.contains(event.target)) {
-        attachMenu.classList.add("hidden");
-      }
-    });
-
-    window.ClaudeInputAPI = {
-      sendFromOutside: (text) => {
-        input.value = text;
-        resizeInput();
-        syncSendState();
-        send(text);
-      }
-    };
-
-    if (window.visualViewport && inputShell) {
-      const adjustInputForKeyboard = () => {
-        const viewport = window.visualViewport;
-        const keyboardHeight = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-        inputShell.style.bottom = `${keyboardHeight}px`;
-      };
-      window.visualViewport.addEventListener("resize", adjustInputForKeyboard);
-      window.visualViewport.addEventListener("scroll", adjustInputForKeyboard);
-      adjustInputForKeyboard();
     }
 
-    resizeInput();
-    syncSendState();
-    if (window.ClaudeChat) {
-      window.ClaudeChat.setNaijaMode(false);
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const address = walletInput.value.trim().replace(/[\u200B-\u200D\uFEFF|]/g, "");
+      // #region agent log
+      fetch('http://127.0.0.1:7889/ingest/485cd955-1c15-4f9c-9862-3f57fb0a2ed8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f87d21'},body:JSON.stringify({sessionId:'f87d21',runId:'initial',hypothesisId:'H1',location:'js/app.js:358',message:'form submit fired',data:{addressLength:address.length,selectedNetwork:String(networkSelect?.value||'')},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      if (!address) {
+        if (inlineError) {
+          inlineError.hidden = true;
+          inlineError.textContent = "";
+        }
+        return;
+      }
+      syncNetworkWithAddress(address);
+      runTrack(address, networkSelect.value);
+    });
+
+    walletInput.addEventListener("input", (e) => {
+      if (inlineError) inlineError.hidden = true;
+      syncNetworkWithAddress(e.target.value);
+    });
+
+    walletInput.addEventListener("paste", () => {
+      requestAnimationFrame(() => syncNetworkWithAddress(walletInput.value));
+    });
+
+    walletInput.addEventListener("drop", () => {
+      requestAnimationFrame(() => syncNetworkWithAddress(walletInput.value));
+    });
+
+    if (inlineError) {
+      inlineError.hidden = true;
+      inlineError.textContent = "";
     }
+
+    if (demoBtn) {
+      demoBtn.addEventListener("click", () => {
+        walletInput.value = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
+        networkSelect.value = "eth";
+        runTrack(walletInput.value, "eth");
+      });
+    }
+
+    if (retryBtn) {
+      retryBtn.addEventListener("click", () => {
+        if (!lastRequest) return;
+        runTrack(lastRequest.address, lastRequest.network);
+      });
+    }
+
+    const currencyToggle = document.getElementById("currencyToggle");
+    if (currencyToggle) {
+      currencyToggle.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-currency]");
+        if (!btn || !latestPayload) return;
+        currencyToggle.querySelectorAll("button[data-currency]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        window.TrackraUI.setCurrencyMode(btn.dataset.currency);
+        window.TrackraUI.renderTokens(latestPayload.tokens, latestPayload.ngnRate);
+        window.TrackraUI.renderTransactions(latestPayload.txs, latestPayload.address, latestPayload.ngnRate);
+      });
+    }
+
+    const txFilters = document.getElementById("txFilters");
+    if (txFilters) {
+      txFilters.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-filter]");
+        if (!btn || !latestPayload) return;
+        txFilters.querySelectorAll("button[data-filter]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        window.TrackraUI.setTxFilter(btn.dataset.filter);
+        window.TrackraUI.renderTransactions(latestPayload.txs, latestPayload.address, latestPayload.ngnRate);
+      });
+    }
+
+    let startY = 0;
+    let pulling = false;
+    window.addEventListener("touchstart", (e) => {
+      if (window.scrollY === 0) {
+        startY = e.touches[0].clientY;
+        pulling = true;
+      }
+    }, { passive: true });
+
+    window.addEventListener("touchmove", (e) => {
+      if (!pulling || !pullSpinner) return;
+      const delta = e.touches[0].clientY - startY;
+      if (delta > 12) pullSpinner.classList.add("show");
+    }, { passive: true });
+
+    window.addEventListener("touchend", async (e) => {
+      if (!pulling) return;
+      const endY = e.changedTouches[0].clientY;
+      const delta = endY - startY;
+      pulling = false;
+      if (delta >= 80 && lastRequest) {
+        await runTrack(lastRequest.address, lastRequest.network);
+      }
+      if (pullSpinner) pullSpinner.classList.remove("show");
+    });
   }
 
-  window.addEventListener("DOMContentLoaded", () => {
-    applySavedTheme();
-    setGreeting();
-    setupInput();
-    document.getElementById("themeToggle").addEventListener("click", toggleTheme);
-  });
+  if (isLanding) {
+    setupLanding();
+  } else {
+    setupTracker();
+  }
 })();
