@@ -16,7 +16,6 @@
       }
     };
   }
-
   const historyData = {
     Today: [],
     Yesterday: [
@@ -27,13 +26,14 @@
       { id: "seed-5", title: "How to productize my service", static: true }
     ]
   };
-
   const conversationMap = new Map();
   let activeItem = null;
   let onConversationSelect = null;
 
   function truncateTitle(title) {
-    if (title.length <= 40) return title;
+    if (title.length <= 40) {
+      return title;
+    }
     return `${title.slice(0, 40).trimEnd()}...`;
   }
 
@@ -45,6 +45,10 @@
     activeItem = item;
   }
 
+  function createHistoryItem(title, shouldActivate) {
+    return createHistoryItemFromObject({ id: `temp-${Date.now()}`, title, static: true }, shouldActivate);
+  }
+
   function createHistoryItemFromObject(conversation, shouldActivate) {
     const item = document.createElement("button");
     item.className = "history-item tap-target";
@@ -53,7 +57,6 @@
     item.innerHTML = `<span aria-hidden="true">💬</span><span class="history-title">${truncateTitle(conversation.title)}</span><span class="dots" aria-hidden="true">⋯</span>`;
     item.addEventListener("click", () => {
       setActiveItem(item);
-      if (window.ClaudeSidebar) window.ClaudeSidebar.close();
       if (!conversation.static && typeof onConversationSelect === "function") {
         onConversationSelect(conversation.id);
       }
@@ -67,7 +70,10 @@
 
   function renderHistory() {
     const list = document.getElementById("conversationList");
-    if (!list) return;
+    if (!list) {
+      return;
+    }
+
     list.innerHTML = "";
     Object.entries(historyData).forEach(([label, items]) => {
       const section = document.createElement("div");
@@ -75,6 +81,7 @@
       sectionLabel.className = "history-label";
       sectionLabel.textContent = label;
       section.appendChild(sectionLabel);
+
       items.forEach((entry, index) => {
         section.appendChild(createHistoryItemFromObject(entry, label === "Today" && index === 0));
       });
@@ -92,9 +99,7 @@
     }
 
     const list = document.getElementById("conversationList");
-    const todayLabel = Array.from(list.querySelectorAll(".history-label")).find(
-      (label) => label.textContent === "Today"
-    );
+    const todayLabel = Array.from(list.querySelectorAll(".history-label")).find((label) => label.textContent === "Today");
     if (!todayLabel) {
       renderHistory();
       return;
@@ -116,7 +121,9 @@
   function setActiveById(id) {
     const list = document.getElementById("conversationList");
     const item = list.querySelector(`[data-conversation-id="${id}"]`);
-    if (item) setActiveItem(item);
+    if (item) {
+      setActiveItem(item);
+    }
   }
 
   function getConversationById(id) {
@@ -133,24 +140,28 @@
     const hamburger = document.getElementById("hamburgerBtn");
     const closeBtn = document.getElementById("sidebarClose");
 
-    if (!sidebar || !backdrop || !hamburger || !closeBtn) return;
+    if (!sidebar || !backdrop || !hamburger || !closeBtn) {
+      return;
+    }
 
     let sidebarOpen = false;
-
     const open = () => {
-      if (sidebarOpen) return;
+      if (sidebarOpen) {
+        return;
+      }
       sidebarOpen = true;
       sidebar.classList.add("open");
-      backdrop.classList.add("visible");
-      document.body.style.overflow = "hidden";
+      backdrop.classList.add("show");
+      window.__claudeScrollLock.acquire();
     };
-
     const close = () => {
-      if (!sidebarOpen) return;
+      if (!sidebarOpen) {
+        return;
+      }
       sidebarOpen = false;
       sidebar.classList.remove("open");
-      backdrop.classList.remove("visible");
-      document.body.style.overflow = "";
+      backdrop.classList.remove("show");
+      window.__claudeScrollLock.release();
     };
 
     hamburger.addEventListener("click", open);
