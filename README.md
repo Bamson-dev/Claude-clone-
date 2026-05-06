@@ -8,6 +8,10 @@ Built by: Bamidele Matthew — github.com/bamson-dev
 
 ---
 
+Live app: https://claude-clone-production.up.railway.app/
+
+---
+
 ## What Makes This Different From a Regular Claude Clone
 
 Most Claude clones are just UI copies with no real functionality.
