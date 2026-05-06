@@ -1,5 +1,4 @@
 (function chatModule() {
-  window.API_KEY = "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";
   const conversationHistory = [];
   const naijaSystemPrompt = `You are Claude operating in Naija Mode.
 
@@ -256,13 +255,10 @@ LinkedIn:
   }
 
   async function fetchClaude(payload, retries = 1) {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("/api/messages", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "x-api-key": window.API_KEY,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
     });
@@ -301,7 +297,16 @@ LinkedIn:
     });
 
     if (!response.ok) {
-      throw new Error("API request failed");
+      let errorMessage = "API request failed";
+      try {
+        const errorData = await response.json();
+        if (errorData?.error) {
+          errorMessage = errorData.error;
+        }
+      } catch (_) {
+        // Keep default error message if parsing fails.
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
