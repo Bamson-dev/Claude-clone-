@@ -297,11 +297,24 @@ LinkedIn:
     });
 
     if (!response.ok) {
-      let errorMessage = "API request failed";
+      let errorMessage = `API request failed (HTTP ${response.status})`;
       try {
-        const errorData = await response.json();
-        if (errorData?.error) {
-          errorMessage = errorData.error;
+        const raw = await response.text();
+        if (raw) {
+          try {
+            const errorData = JSON.parse(raw);
+            const extracted =
+              errorData?.error?.message ||
+              errorData?.error ||
+              errorData?.message;
+            if (typeof extracted === "string" && extracted.trim()) {
+              errorMessage = extracted.trim();
+            } else {
+              errorMessage = raw.slice(0, 400);
+            }
+          } catch (_) {
+            errorMessage = raw.slice(0, 400);
+          }
         }
       } catch (_) {
         // Keep default error message if parsing fails.
