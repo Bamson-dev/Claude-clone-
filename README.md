@@ -118,4 +118,39 @@ claude-clone/
 
 -
 
+## Railway Deployment
 
+### Run locally
+
+```bash
+npm start
+```
+
+The server runs on `PORT` (default `3000`).
+
+### Environment variables
+
+Set these in Railway (or `.env` locally):
+
+- `PORT` - provided by Railway automatically.
+- `AI_PROVIDER` - `auto` (default), `anthropic`, or `deepseek`.
+- `ANTHROPIC_API_KEY` - required if provider is `anthropic` or fallback in `auto`.
+- `DEEPSEEK_API_KEY` - required if provider is `deepseek` or fallback in `auto`.
+
+You only need one key if you pin `AI_PROVIDER` to that provider.
+
+### Deploy steps
+
+1. Push this repo to GitHub.
+2. In Railway, create a new project and select **Deploy from GitHub repo**.
+3. Add environment variables in Railway service settings:
+   - `AI_PROVIDER=anthropic` (or `deepseek`)
+   - `ANTHROPIC_API_KEY=...` (or `DEEPSEEK_API_KEY=...`)
+4. Deploy.
+5. Open the generated Railway URL.
+
+### Notes
+
+- Never commit real API keys to GitHub.
+- `.env` is ignored by `.gitignore`.
+- If no valid provider key is set, the app returns: `No configured AI provider is available`.
