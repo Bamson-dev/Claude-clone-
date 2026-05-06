@@ -509,7 +509,8 @@ LinkedIn:
     try {
       responseText = await requestClaude(text, attachment);
     } catch (error) {
-      responseText = "Something went wrong. Please check your connection and try again.";
+      const msg = typeof error?.message === "string" ? error.message.trim() : "";
+      responseText = msg || "Something went wrong. Please check your connection and try again.";
     } finally {
       removeTypingIndicator();
       appendAssistantStream(responseText);
