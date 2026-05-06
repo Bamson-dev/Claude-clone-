@@ -29,31 +29,36 @@ loadEnvFile();
 
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
+const REQUEST_WINDOW_MS = 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 40;
+const rateLimitBuckets = new Map();
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type"
 };
 
-function logDebug(hypothesisId, location, message, data) {
-  // #region agent log
-  fetch("http://127.0.0.1:7259/ingest/2185d34f-051b-4338-86cb-b8c26904afa6", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "5fa845"
-    },
-    body: JSON.stringify({
-      sessionId: "5fa845",
-      runId: "backend-proxy",
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now()
-    })
-  }).catch(() => {});
-  // #endregion
+function getClientIp(req) {
+  const xff = req.headers["x-forwarded-for"];
+  if (typeof xff === "string" && xff.trim()) {
+    return xff.split(",")[0].trim();
+  }
+  return req.socket?.remoteAddress || "unknown";
+}
+
+function isRateLimited(req) {
+  const key = getClientIp(req);
+  const now = Date.now();
+  const existing = rateLimitBuckets.get(key);
+  if (!existing || now > existing.resetAt) {
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + REQUEST_WINDOW_MS });
+    return false;
+  }
+  existing.count += 1;
+  if (existing.count > MAX_REQUESTS_PER_WINDOW) {
+    return true;
+  }
+  return false;
 }
 
 function getAnthropicApiKey() {
@@ -249,11 +254,6 @@ async function readJsonBody(req) {
 
 const server = http.createServer(async (req, res) => {
   if (req.url === "/api/messages" && req.method === "OPTIONS") {
-    // #region agent log
-    logDebug("B4", "server.js:/api/messages:options", "Handled CORS preflight", {
-      origin: req.headers.origin || null
-    });
-    // #endregion
     res.writeHead(204, corsHeaders);
     res.end();
     return;
@@ -261,22 +261,18 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "POST" && req.url === "/api/messages") {
     try {
+      if (isRateLimited(req)) {
+        res.writeHead(429, { "Content-Type": "application/json", ...corsHeaders });
+        res.end(JSON.stringify({ error: "Too many requests. Please wait a minute and try again." }));
+        return;
+      }
+
       const payload = await readJsonBody(req);
       const providerPreference = getProviderPreference();
       const ANTHROPIC_API_KEY = getAnthropicApiKey();
       const DEEPSEEK_API_KEY = getDeepSeekApiKey();
       const providerChain =
         providerPreference === "auto" ? ["deepseek", "anthropic"] : [providerPreference];
-      // #region agent log
-      logDebug("B1", "server.js:/api/messages:entry", "Proxy request received", {
-        providerPreference,
-        providerChain,
-        hasAnthropicKey: Boolean(ANTHROPIC_API_KEY),
-        hasDeepSeekKey: Boolean(DEEPSEEK_API_KEY),
-        model: payload?.model || null,
-        origin: req.headers.origin || null
-      });
-      // #endregion
 
       if (providerPreference === "deepseek" && !DEEPSEEK_API_KEY) {
         res.writeHead(500, { "Content-Type": "application/json", ...corsHeaders });
@@ -330,17 +326,9 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      // #region agent log
-      logDebug("B2", "server.js:/api/messages:upstream", "Upstream response", {
-        provider: selectedProvider,
-        status: result.upstream.status,
-        ok: result.upstream.ok,
-        bodyPreview: result.responseText.slice(0, 240)
-      });
-      // #endregion
-
       if (!result.upstream.ok) {
         const upstreamMessage = parseUpstreamErrorMessage(result.responseText);
+        console.warn(`Upstream ${selectedProvider} error ${result.upstream.status}: ${upstreamMessage}`);
         res.writeHead(result.upstream.status, { "Content-Type": "application/json", ...corsHeaders });
         res.end(
           JSON.stringify({
@@ -354,13 +342,7 @@ const server = http.createServer(async (req, res) => {
       res.end(result.responseText);
     } catch (error) {
       const causeMessage = error?.cause?.message ? `: ${error.cause.message}` : "";
-      // #region agent log
-      logDebug("B3", "server.js:/api/messages:error", "Proxy failed", {
-        errorName: error?.name || "Error",
-        errorMessage: error?.message || "Unknown",
-        errorCause: error?.cause?.message || null
-      });
-      // #endregion
+      console.error("Proxy failed:", error?.message || "Unknown error");
       res.writeHead(500, { "Content-Type": "application/json", ...corsHeaders });
       res.end(JSON.stringify({ error: `${error.message || "Proxy error"}${causeMessage}` }));
     }

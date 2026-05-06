@@ -523,7 +523,15 @@ LinkedIn:
       responseText = await requestClaude(text, attachment);
     } catch (error) {
       const msg = typeof error?.message === "string" ? error.message.trim() : "";
-      responseText = msg || "Something went wrong. Please check your connection and try again.";
+      if (msg.includes("Too many requests")) {
+        responseText = "You are sending messages too quickly. Please wait a minute and try again.";
+      } else if (msg.includes("Server missing")) {
+        responseText = "The AI service is not configured correctly yet. Please contact support.";
+      } else if (msg.includes("Upstream")) {
+        responseText = "The AI provider is temporarily unavailable. Please try again shortly.";
+      } else {
+        responseText = msg || "Something went wrong. Please check your connection and try again.";
+      }
     } finally {
       removeTypingIndicator();
       appendAssistantStream(responseText);
