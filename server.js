@@ -121,6 +121,27 @@ function mapStopReason(reason) {
   return reason || "end_turn";
 }
 
+function parseUpstreamErrorMessage(raw) {
+  if (!raw || typeof raw !== "string") {
+    return "Upstream request failed";
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.error === "string") {
+      return parsed.error;
+    }
+    if (typeof parsed?.error?.message === "string") {
+      return parsed.error.message;
+    }
+    if (typeof parsed?.message === "string") {
+      return parsed.message;
+    }
+  } catch (_) {
+    // Fall back to raw text when upstream response is not JSON.
+  }
+  return raw.slice(0, 500);
+}
+
 async function callDeepSeek(payload, apiKey) {
   const deepSeekPayload = {
     model: mapDeepSeekModel(payload.model),
@@ -318,7 +339,18 @@ const server = http.createServer(async (req, res) => {
       });
       // #endregion
 
-      res.writeHead(result.upstream.status, { "Content-Type": "application/json", ...corsHeaders });
+      if (!result.upstream.ok) {
+        const upstreamMessage = parseUpstreamErrorMessage(result.responseText);
+        res.writeHead(result.upstream.status, { "Content-Type": "application/json", ...corsHeaders });
+        res.end(
+          JSON.stringify({
+            error: `Upstream ${selectedProvider} error (${result.upstream.status}): ${upstreamMessage}`
+          })
+        );
+        return;
+      }
+
+      res.writeHead(200, { "Content-Type": "application/json", ...corsHeaders });
       res.end(result.responseText);
     } catch (error) {
       const causeMessage = error?.cause?.message ? `: ${error.cause.message}` : "";
