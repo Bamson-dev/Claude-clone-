@@ -8,7 +8,7 @@ Built by: Bamidele Matthew — github.com/bamson-dev
 
 ---
 
-Live app: https://claude-clone-production.up.railway.app/
+Live app: https://claude-clone.onrender.com/
 
 ---
 
@@ -122,7 +122,7 @@ claude-clone/
 
 -
 
-## Railway Deployment
+## Render Deployment
 
 ### Run locally
 
@@ -134,27 +134,43 @@ The server runs on `PORT` (default `3000`).
 
 ### Environment variables
 
-Set these in Railway (or `.env` locally):
+Set these in Render (or `.env` locally):
 
-- `PORT` - provided by Railway automatically.
+- `PORT` - provided by Render automatically.
 - `AI_PROVIDER` - `auto` (default), `anthropic`, or `deepseek`.
 - `ANTHROPIC_API_KEY` - required if provider is `anthropic` or fallback in `auto`.
 - `DEEPSEEK_API_KEY` - required if provider is `deepseek` or fallback in `auto`.
 
 You only need one key if you pin `AI_PROVIDER` to that provider.
 
-### Deploy steps
+### Deploy with Blueprint (recommended)
+
+This repo includes a `render.yaml` Blueprint. One-click setup:
 
 1. Push this repo to GitHub.
-2. In Railway, create a new project and select **Deploy from GitHub repo**.
-3. Add environment variables in Railway service settings:
-   - `AI_PROVIDER=anthropic` (or `deepseek`)
-   - `ANTHROPIC_API_KEY=...` (or `DEEPSEEK_API_KEY=...`)
-4. Deploy.
-5. Open the generated Railway URL.
+2. Open [Create a new Blueprint on Render](https://dashboard.render.com/blueprint/new?repo=https://github.com/Bamson-dev/Claude-clone-).
+3. Review the service config and click **Apply**.
+4. When prompted, add secret environment variables:
+   - `ANTHROPIC_API_KEY` (if using Anthropic)
+   - `DEEPSEEK_API_KEY` (if using DeepSeek)
+5. Set `AI_PROVIDER` to `anthropic`, `deepseek`, or leave as `auto`.
+6. Wait for the deploy to finish, then open your Render URL (default: `https://claude-clone.onrender.com`).
+
+### Deploy manually (alternative)
+
+1. In [Render Dashboard](https://dashboard.render.com/), click **New +** → **Web Service**.
+2. Connect the GitHub repo `Bamson-dev/Claude-clone-`.
+3. Configure:
+   - **Runtime:** Node
+   - **Build command:** `npm install`
+   - **Start command:** `npm start`
+   - **Health check path:** `/`
+4. Add the environment variables listed above.
+5. Click **Create Web Service**.
 
 ### Notes
 
 - Never commit real API keys to GitHub.
 - `.env` is ignored by `.gitignore`.
 - If no valid provider key is set, the app returns: `No configured AI provider is available`.
+- On Render's free tier, the service sleeps after ~15 minutes of inactivity. The first request after sleep may take 30–60 seconds to wake up.
