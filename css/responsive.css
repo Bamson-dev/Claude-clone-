@@ -1,4 +1,18 @@
 @media (max-width: 1023px) {
+  .topbar {
+    padding-top: env(safe-area-inset-top);
+    height: calc(52px + env(safe-area-inset-top));
+    min-height: calc(52px + env(safe-area-inset-top));
+  }
+
+  .chat-main {
+    margin-top: calc(52px + env(safe-area-inset-top));
+  }
+
+  .naija-banner {
+    margin-top: calc(52px + env(safe-area-inset-top));
+  }
+
   .chat-empty-state {
     padding: 20px 16px;
     gap: 8px;
@@ -104,5 +118,22 @@
 
   .mode-text {
     display: inline;
+  }
+}
+
+@media (max-width: 320px) {
+  .suggestion-card {
+    min-width: 140px;
+    max-width: 160px;
+    font-size: 12px;
+  }
+
+  .sidebar {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+  }
+
+  .input-left-actions {
+    gap: 4px;
   }
 }

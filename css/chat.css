@@ -256,12 +256,16 @@
   position: absolute;
   top: 8px;
   right: 8px;
-  min-height: 28px;
-  min-width: 28px;
+  min-height: 32px;
+  min-width: 32px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.1);
   color: #f2f2f2;
   font-size: 12px;
+}
+
+.code-wrap .copy-code-btn {
+  position: static;
 }
 
 .message-actions {
@@ -271,10 +275,14 @@
 }
 
 .message-actions button {
-  min-height: 36px;
-  min-width: 36px;
+  min-height: 44px;
+  min-width: 44px;
   font-size: 14px;
   color: inherit;
+}
+
+.message-actions button:active {
+  transform: scale(0.94);
 }
 
 .message-actions button.active-like {

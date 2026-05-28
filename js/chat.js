@@ -163,67 +163,22 @@ LinkedIn:
     started: false,
     currentStream: null,
     naijaModeActive: false,
+    naijaContext: { business: "", city: "Lagos" },
     activeConversationId: null
   };
   const conversations = new Map();
 
   const escapeHtml = (value) =>
-    value
+    window.ClaudeMarkdown?.escapeHtml(value) ||
+    String(value)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
 
-  const parseMarkdown = (markdown) => {
-    const codeBlocks = [];
-    let text = markdown.replace(/```([\s\S]*?)```/g, (_, code) => {
-      const token = `__CODE_BLOCK_${codeBlocks.length}__`;
-      codeBlocks.push(`<div class="code-wrap"><button class="copy-code-btn" type="button">Copy</button><pre><code>${escapeHtml(code.trim())}</code></pre></div>`);
-      return token;
-    });
-
-    text = escapeHtml(text);
-    text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-    text = text.replace(/\*(.*?)\*/g, "<em>$1</em>");
-    text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
-
-    const paragraphs = text.split(/\n\n+/).map((block) => {
-      const trimmedBlock = block.trim();
-      if (/^###\s+/.test(trimmedBlock)) {
-        return `<h3>${trimmedBlock.replace(/^###\s+/, "")}</h3>`;
-      }
-      if (/^##\s+/.test(trimmedBlock)) {
-        return `<h2>${trimmedBlock.replace(/^##\s+/, "")}</h2>`;
-      }
-      if (/^#\s+/.test(trimmedBlock)) {
-        return `<h1>${trimmedBlock.replace(/^#\s+/, "")}</h1>`;
-      }
-      if (/^-\s/m.test(trimmedBlock)) {
-        const items = block
-          .split("\n")
-          .filter((line) => line.trim().startsWith("-"))
-          .map((line) => `<li>${line.replace(/^-+\s*/, "")}</li>`)
-          .join("");
-        return `<ul>${items}</ul>`;
-      }
-      if (/^\d+\.\s/m.test(trimmedBlock)) {
-        const items = block
-          .split("\n")
-          .filter((line) => /^\d+\.\s/.test(line.trim()))
-          .map((line) => `<li>${line.replace(/^\d+\.\s*/, "")}</li>`)
-          .join("");
-        return `<ol>${items}</ol>`;
-      }
-      return `<p>${trimmedBlock.replace(/\n/g, "<br>")}</p>`;
-    });
-
-    let html = paragraphs.join("");
-    codeBlocks.forEach((block, index) => {
-      html = html.replace(`__CODE_BLOCK_${index}__`, block);
-    });
-    return html;
-  };
+  const parseMarkdown = (markdown, options) =>
+    window.ClaudeMarkdown?.parseMarkdown(markdown, options) || escapeHtml(markdown);
 
   function getActiveConversation() {
     if (!state.activeConversationId) {
@@ -243,7 +198,8 @@ LinkedIn:
       active = {
         id,
         title: formatTitle(userMessage),
-        messages: []
+        messages: [],
+        meta: { pinned: false, favorite: false, tags: [] }
       };
       conversations.set(id, active);
       state.activeConversationId = id;
@@ -252,6 +208,16 @@ LinkedIn:
       }
     }
     return active;
+  }
+
+  function syncConversation(active) {
+    if (!active) {
+      return;
+    }
+    conversations.set(active.id, active);
+    if (window.ClaudeSidebar) {
+      window.ClaudeSidebar.addConversation(active);
+    }
   }
 
   async function fetchClaude(payload, retries = 1) {
@@ -270,7 +236,8 @@ LinkedIn:
     return response;
   }
 
-  async function requestClaude(userMessage, attachment) {
+  async function requestClaude(userMessage, attachment, options = {}) {
+    const skipUserPush = Boolean(options.skipUserPush);
     let userContent = userMessage;
     if (attachment && attachment.type && attachment.base64Data) {
       userContent = [
@@ -288,11 +255,24 @@ LinkedIn:
         }
       ];
     }
-    conversationHistory.push({ role: "user", content: userContent });
+    if (!skipUserPush) {
+      conversationHistory.push({ role: "user", content: userContent });
+    }
+    let systemPrompt = state.naijaModeActive ? naijaSystemPrompt : undefined;
+    if (state.naijaModeActive && (state.naijaContext.business || state.naijaContext.city)) {
+      const ctx = [];
+      if (state.naijaContext.business) {
+        ctx.push(`User business: ${state.naijaContext.business}`);
+      }
+      if (state.naijaContext.city) {
+        ctx.push(`Default city context: ${state.naijaContext.city}`);
+      }
+      systemPrompt = `${naijaSystemPrompt}\n\nSaved user context:\n${ctx.join("\n")}`;
+    }
     const response = await fetchClaude({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
-      system: state.naijaModeActive ? naijaSystemPrompt : undefined,
+      system: systemPrompt,
       messages: conversationHistory
     });
 
@@ -361,9 +341,7 @@ LinkedIn:
     const active = getActiveConversation();
     if (active) {
       active.messages.push({ role: "user", content: text, timestamp: new Date().toISOString() });
-      if (window.ClaudeSidebar) {
-        window.ClaudeSidebar.addConversation(active);
-      }
+      syncConversation(active);
     }
   }
 
@@ -390,9 +368,13 @@ LinkedIn:
 
   function attachAssistantActions(root) {
     root.querySelectorAll(".copy-code-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const code = btn.parentElement.querySelector("code");
-        navigator.clipboard.writeText(code.textContent || "");
+      btn.addEventListener("click", async () => {
+        const code = btn.closest(".code-wrap")?.querySelector("code");
+        await navigator.clipboard.writeText(code?.textContent || "");
+        btn.textContent = "Copied";
+        setTimeout(() => {
+          btn.textContent = "Copy";
+        }, 1500);
       });
     });
     root.querySelectorAll(".action-copy").forEach((btn) => {
@@ -443,8 +425,42 @@ LinkedIn:
         active.pinnedMessage = root.dataset.rawText || "";
         updatePinnedUI(active);
         refreshPinStates();
+        syncConversation(active);
       });
     });
+
+    root.querySelectorAll(".action-regenerate").forEach((btn) => {
+      btn.addEventListener("click", () => regenerateAssistantMessage(root));
+    });
+  }
+
+  async function regenerateAssistantMessage(row) {
+    const active = getActiveConversation();
+    if (!active || !row) {
+      return;
+    }
+    const idx = active.messages.findIndex((m) => m.role === "assistant" && m.content === row.dataset.rawText);
+    if (idx <= 0) {
+      return;
+    }
+    const lastUser = [...active.messages.slice(0, idx)].reverse().find((m) => m.role === "user");
+    if (!lastUser) {
+      return;
+    }
+    active.messages = active.messages.slice(0, idx);
+    conversationHistory.length = 0;
+    active.messages.forEach((msg) => conversationHistory.push({ role: msg.role, content: msg.content }));
+    row.remove();
+    appendTypingIndicator();
+    let responseText = "Something went wrong. Please try again.";
+    try {
+      responseText = await requestClaude(lastUser.content, null, { skipUserPush: true });
+    } catch (error) {
+      responseText = error?.message || responseText;
+    } finally {
+      removeTypingIndicator();
+      appendAssistantStream(responseText);
+    }
   }
 
   function refreshPinStates() {
@@ -485,7 +501,7 @@ LinkedIn:
     const row = document.createElement("div");
     row.className = "message-row assistant";
     row.dataset.rawText = fullText;
-    row.innerHTML = `<div class="assistant-head"><span class="diamond-icon"></span><div class="assistant-content"></div></div><div class="message-actions"><button class="action-copy" aria-label="Copy"><i class="fa-regular fa-copy"></i></button><button class="action-like" aria-label="Thumbs up"><i class="far fa-thumbs-up"></i></button><button class="action-dislike" aria-label="Thumbs down"><i class="far fa-thumbs-down"></i></button><button class="action-pin" aria-label="Pin"><i class="fa-regular fa-thumbtack"></i></button></div><div class="message-timestamp assistant-timestamp">${formatTimestamp(new Date())}</div>`;
+    row.innerHTML = `<div class="assistant-head"><span class="diamond-icon"></span><div class="assistant-content"></div></div><div class="message-actions"><button class="action-copy tap-target" aria-label="Copy"><i class="fa-regular fa-copy"></i></button><button class="action-regenerate tap-target" aria-label="Regenerate"><i class="fa-solid fa-rotate-right"></i></button><button class="action-like tap-target" aria-label="Thumbs up"><i class="far fa-thumbs-up"></i></button><button class="action-dislike tap-target" aria-label="Thumbs down"><i class="far fa-thumbs-down"></i></button><button class="action-pin tap-target" aria-label="Pin"><i class="fa-regular fa-thumbtack"></i></button></div><div class="message-timestamp assistant-timestamp">${formatTimestamp(new Date())}</div>`;
     messages.appendChild(row);
 
     const content = row.querySelector(".assistant-content");
@@ -496,27 +512,33 @@ LinkedIn:
     const stream = setInterval(() => {
       idx += 1;
       const partial = words.slice(0, idx).join(" ");
-      content.innerHTML = parseMarkdown(partial);
+      const isComplete = idx >= words.length;
+      content.innerHTML = parseMarkdown(partial, { streaming: !isComplete });
       scrollToBottom();
-      if (idx >= words.length) {
+      if (isComplete) {
         clearInterval(stream);
         state.currentStream = null;
+        content.innerHTML = parseMarkdown(fullText);
         attachAssistantActions(row);
         if (active) {
           active.messages.push({ role: "assistant", content: fullText, timestamp });
-          if (window.ClaudeSidebar) {
-            window.ClaudeSidebar.addConversation(active);
-          }
+          syncConversation(active);
+        }
+        if (window.ClaudeFeatures) {
+          window.ClaudeFeatures.trackEvent("assistant_reply", { chars: fullText.length });
         }
         refreshPinStates();
       }
-    }, 40);
+    }, 32);
     state.currentStream = stream;
   }
 
   async function sendMessage(text, attachment) {
     ensureConversationForMessage(text);
     appendUserMessage(text);
+    if (window.ClaudeFeatures) {
+      window.ClaudeFeatures.trackEvent("message_sent", { chars: text.length });
+    }
     appendTypingIndicator();
     let responseText = "Something went wrong. Please check your connection and try again.";
     try {
@@ -561,7 +583,7 @@ LinkedIn:
         const row = document.createElement("div");
         row.className = "message-row assistant";
         row.dataset.rawText = msg.content;
-        row.innerHTML = `<div class="assistant-head"><span class="diamond-icon"></span><div class="assistant-content">${parseMarkdown(msg.content)}</div></div><div class="message-actions"><button class="action-copy" aria-label="Copy"><i class="fa-regular fa-copy"></i></button><button class="action-like" aria-label="Thumbs up"><i class="far fa-thumbs-up"></i></button><button class="action-dislike" aria-label="Thumbs down"><i class="far fa-thumbs-down"></i></button><button class="action-pin" aria-label="Pin"><i class="fa-regular fa-thumbtack"></i></button></div><div class="message-timestamp assistant-timestamp">${formatTimestamp(new Date(msg.timestamp || Date.now()))}</div>`;
+        row.innerHTML = `<div class="assistant-head"><span class="diamond-icon"></span><div class="assistant-content">${parseMarkdown(msg.content)}</div></div><div class="message-actions"><button class="action-copy tap-target" aria-label="Copy"><i class="fa-regular fa-copy"></i></button><button class="action-regenerate tap-target" aria-label="Regenerate"><i class="fa-solid fa-rotate-right"></i></button><button class="action-like tap-target" aria-label="Thumbs up"><i class="far fa-thumbs-up"></i></button><button class="action-dislike tap-target" aria-label="Thumbs down"><i class="far fa-thumbs-down"></i></button><button class="action-pin tap-target" aria-label="Pin"><i class="fa-regular fa-thumbtack"></i></button></div><div class="message-timestamp assistant-timestamp">${formatTimestamp(new Date(msg.timestamp || Date.now()))}</div>`;
         messages.appendChild(row);
         attachAssistantActions(row);
       }
@@ -647,19 +669,51 @@ This content must be ready to run as a paid ad with zero editing needed.`
     const customerMessage = payload.customerMessage;
     const response = await fetchClaude({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: whatsappSystemPrompt,
       messages: [{
         role: "user",
-        content: `Generate a WhatsApp business reply for a ${businessType} business. Customer message: "${customerMessage}". Tone: ${selectedTone}. Include: ${selectedIncludes.join(", ")}. Make it sound human, warm, and drive the customer toward buying or taking the next step.`
+        content: `Generate exactly 3 different WhatsApp business reply options for a ${businessType} business.
+
+Customer message: "${customerMessage}"
+Tone: ${selectedTone}
+Include: ${selectedIncludes.join(", ")}
+
+Format each option exactly like this:
+---OPTION 1---
+[reply text]
+SCORE: [1-10 conversion score with brief reason]
+
+---OPTION 2---
+[reply text]
+SCORE: [1-10 conversion score with brief reason]
+
+---OPTION 3---
+[reply text]
+SCORE: [1-10 conversion score with brief reason]
+
+Make each option meaningfully different in approach while staying warm and conversion-focused.`
       }]
     });
     if (!response.ok) {
       throw new Error("WhatsApp generation failed");
     }
     const data = await response.json();
-    const reply = data.content[0].text;
-    return reply;
+    const raw = data.content[0].text;
+    return parseWhatsAppOptions(raw);
+  }
+
+  function parseWhatsAppOptions(raw) {
+    const chunks = raw.split(/---OPTION\s*\d+---/i).map((s) => s.trim()).filter(Boolean);
+    if (chunks.length === 0) {
+      return [{ text: raw, score: "" }];
+    }
+    return chunks.map((chunk, index) => {
+      const scoreMatch = chunk.match(/SCORE:\s*([\s\S]*)$/i);
+      const score = scoreMatch ? scoreMatch[1].trim() : "";
+      const text = scoreMatch ? chunk.slice(0, scoreMatch.index).trim() : chunk;
+      return { text, score, label: `Option ${index + 1}` };
+    });
   }
 
   function setGreeting() {
@@ -684,6 +738,11 @@ This content must be ready to run as a paid ad with zero editing needed.`
     bindSuggestions();
     if (window.ClaudeSidebar) {
       window.ClaudeSidebar.registerConversationSelect(loadConversation);
+      window.ClaudeSidebar.getAllConversations?.().forEach((conv) => {
+        if (!conv.static || conv.messages?.length) {
+          conversations.set(conv.id, conv);
+        }
+      });
     }
     const pinnedClose = document.getElementById("pinnedClose");
     if (pinnedClose) {
@@ -700,12 +759,17 @@ This content must be ready to run as a paid ad with zero editing needed.`
     window.ClaudeChat = {
       sendMessage,
       loadConversation,
+      getActiveConversation,
       renderMarkdown: parseMarkdown,
       setNaijaMode: (isActive) => {
         state.naijaModeActive = Boolean(isActive);
       },
+      setNaijaContext: (ctx) => {
+        state.naijaContext = { business: ctx?.business || "", city: ctx?.city || "Lagos" };
+      },
       generateContentResponse,
       generateWhatsAppReply,
+      regenerateAssistantMessage,
       resetConversation: () => {
         conversationHistory.length = 0;
         if (state.currentStream) {

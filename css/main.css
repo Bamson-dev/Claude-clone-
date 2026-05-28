@@ -41,6 +41,8 @@ button {
   --hover-bg: rgba(0, 0, 0, 0.04);
   --sidebar-active: #e8e6e0;
   --claude-orange: #da7756;
+  --bg-main: #ffffff;
+  --focus-ring: rgba(218, 119, 86, 0.45);
 }
 
 [data-theme="dark"] {
@@ -56,6 +58,7 @@ button {
   --input-bg: #2a2825;
   --hover-bg: rgba(255, 255, 255, 0.04);
   --sidebar-active: #2f2d29;
+  --bg-main: #1a1917;
 }
 
 html {

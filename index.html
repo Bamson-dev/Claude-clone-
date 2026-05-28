@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="./css/chat.css">
   <link rel="stylesheet" href="./css/input.css">
   <link rel="stylesheet" href="./css/responsive.css">
+  <link rel="stylesheet" href="./css/features.css">
 </head>
 <body>
   <div class="app">
@@ -35,6 +36,17 @@
           <span aria-hidden="true">✎</span>
           <span>New chat</span>
         </button>
+        <label class="sr-only" for="conversationSearch">Search chats</label>
+        <div class="conversation-search-wrap">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          <input type="search" id="conversationSearch" class="conversation-search" placeholder="Search chats..." autocomplete="off">
+        </div>
+      </div>
+
+      <div class="sidebar-filters" role="toolbar" aria-label="Filter chats">
+        <button type="button" class="filter-chip active tap-target" data-filter="all">All</button>
+        <button type="button" class="filter-chip tap-target" data-filter="pinned">Pinned</button>
+        <button type="button" class="filter-chip tap-target" data-filter="favorites">Favorites</button>
       </div>
 
       <div class="conversation-groups" id="conversationList"></div>
@@ -47,9 +59,13 @@
           </div>
           <span aria-hidden="true">⌄</span>
         </div>
-        <button class="footer-icon-row tap-target">
+        <button class="footer-icon-row tap-target" id="settingsBtn" type="button">
           <span aria-hidden="true">⚙</span>
           <span>Settings</span>
+        </button>
+        <button class="footer-icon-row tap-target" id="promptLibraryBtn" type="button">
+          <span aria-hidden="true">📋</span>
+          <span>Prompt library</span>
         </button>
         <button class="theme-toggle tap-target" id="themeToggle" aria-label="Toggle theme">
           <span aria-hidden="true">☀</span>
@@ -73,6 +89,23 @@
           <h3>Naija Content Generator</h3>
           <p>Fill in the details below. We handle the marketing.</p>
         </div>
+
+        <div class="cg-toolbar">
+          <label class="panel-label" for="cgTemplateSelect">Campaign template</label>
+          <select id="cgTemplateSelect" class="cg-select">
+            <option value="">Start from scratch</option>
+            <option value="product-launch">Product launch</option>
+            <option value="weekend-promo">Weekend promo</option>
+            <option value="service-business">Service business</option>
+            <option value="personal-brand">Personal brand</option>
+          </select>
+          <button type="button" class="content-action-btn tap-target" id="cgSaveTemplateBtn">Save as template</button>
+        </div>
+
+        <details class="cg-history-wrap" id="cgHistoryWrap">
+          <summary class="cg-history-summary tap-target">Content history</summary>
+          <div class="cg-history-list" id="cgHistoryList"></div>
+        </details>
 
         <p class="section-label">Your Business</p>
         <label class="panel-label" for="cgSell">What do you sell?</label>
@@ -125,6 +158,8 @@
 
         <button class="content-submit tap-target" id="contentGenerateBtn"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Generate Content</button>
         <div class="content-result hidden" id="contentResultWrap">
+          <div class="cg-preview-tabs hidden" id="cgPreviewTabs" role="tablist" aria-label="Platform previews"></div>
+          <div class="cg-preview-stage hidden" id="cgPreviewStage"></div>
           <div class="content-result-body" id="contentResultBody"></div>
           <div class="cg-scroll-hint hidden" id="cgScrollHint">Scroll to see all platforms</div>
           <div class="content-actions">
@@ -153,6 +188,9 @@
         <label class="wa-check"><input type="checkbox" id="waIncludePayment"> Payment details (Opay, Palmpay, Bank transfer)</label>
         <label class="wa-check"><input type="checkbox" id="waIncludeDelivery"> Delivery information</label>
         <button class="wa-submit tap-target" id="waGenerateBtn">Generate Reply</button>
+        <div class="wa-preview hidden" id="waPreview">
+          <div class="wa-preview-bubble" id="waPreviewBubble"></div>
+        </div>
         <div class="panel-result hidden" id="waResultWrap">
           <button class="panel-copy tap-target" id="waCopyBtn" aria-label="Copy WhatsApp result">Copy</button>
           <div class="panel-result-body" id="waResultBody"></div>
@@ -228,8 +266,69 @@
   </div>
   <input type="file" id="file-upload" style="display:none" accept="image/*,.pdf,.doc,.docx,.txt">
 
+  <div class="generator-panel-backdrop hidden" id="utilityPanelBackdrop" aria-hidden="true"></div>
+
+  <div class="settings-panel hidden" id="settingsPanel" role="dialog" aria-labelledby="settingsTitle">
+    <button class="panel-close tap-target" id="settingsClose" aria-label="Close settings">✕</button>
+    <h3 id="settingsTitle">Settings</h3>
+    <p class="settings-sub">Claude preferences and productivity tools</p>
+
+    <div class="settings-section">
+      <h4>Naija Mode</h4>
+      <label class="panel-label" for="naijaBusinessContext">Business context</label>
+      <input id="naijaBusinessContext" class="settings-input" type="text" placeholder="e.g. Fashion brand in Lagos">
+      <label class="panel-label" for="naijaDefaultCity">Default city</label>
+      <input id="naijaDefaultCity" class="settings-input" type="text" placeholder="Lagos">
+    </div>
+
+    <div class="settings-section">
+      <h4>Export conversation</h4>
+      <div class="settings-actions">
+        <button type="button" class="settings-btn tap-target" id="exportMdBtn">Export Markdown</button>
+        <button type="button" class="settings-btn tap-target" id="exportPdfBtn">Export PDF</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h4>Usage analytics</h4>
+      <div class="analytics-grid">
+        <div class="stat-card"><div class="stat-value" id="statMessages">0</div><div class="stat-label">Messages sent</div></div>
+        <div class="stat-card"><div class="stat-value" id="statReplies">0</div><div class="stat-label">Claude replies</div></div>
+        <div class="stat-card"><div class="stat-value" id="statTokens">0</div><div class="stat-label">Est. tokens</div></div>
+        <div class="stat-card"><div class="stat-value" id="statSessions">0</div><div class="stat-label">Sessions</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prompt-panel hidden" id="promptPanel" role="dialog" aria-labelledby="promptTitle">
+    <button class="panel-close tap-target" id="promptClose" aria-label="Close prompt library">✕</button>
+    <h3 id="promptTitle">Prompt library</h3>
+    <p class="panel-sub">Saved prompts with variables like {{topic}}</p>
+    <div class="prompt-list" id="promptList"></div>
+    <div class="settings-section">
+      <h4>Save new prompt</h4>
+      <input id="newPromptTitle" class="prompt-input" type="text" placeholder="Prompt title">
+      <textarea id="newPromptText" class="settings-textarea" placeholder="Prompt text with {{variables}}"></textarea>
+      <button type="button" class="prompt-btn primary tap-target" id="savePromptBtn">Save prompt</button>
+    </div>
+  </div>
+
+  <div class="shortcuts-panel hidden" id="shortcutsPanel" role="dialog" aria-labelledby="shortcutsTitle">
+    <button class="panel-close tap-target" id="shortcutsClose" aria-label="Close shortcuts">✕</button>
+    <h3 id="shortcutsTitle">Keyboard shortcuts</h3>
+    <ul class="shortcuts-list">
+      <li><span>Search chats</span><kbd>⌘ K</kbd></li>
+      <li><span>New chat</span><kbd>⌘ N</kbd></li>
+      <li><span>Prompt library</span><kbd>⌘ ⇧ P</kbd></li>
+      <li><span>Shortcuts</span><kbd>⌘ /</kbd></li>
+      <li><span>Close panel / sidebar</span><kbd>Esc</kbd></li>
+    </ul>
+  </div>
+
+  <script src="./js/markdown.js"></script>
   <script src="./js/sidebar.js"></script>
   <script src="./js/chat.js"></script>
   <script src="./js/app.js"></script>
+  <script src="./js/features.js"></script>
 </body>
 </html>

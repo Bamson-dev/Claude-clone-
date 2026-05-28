@@ -603,10 +603,10 @@
 
   .input-left-actions .icon-btn,
   .input-left-actions .mode-btn {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    min-height: 36px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     padding: 0;
     border-radius: 50%;
     background: var(--hover-bg);
@@ -674,10 +674,10 @@
   }
 
   .send-btn {
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
-    min-height: 40px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .send-btn:not(:disabled) {
